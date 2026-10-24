@@ -3,25 +3,24 @@ name: Release YouTube Morphe
 on:
   workflow_dispatch:
     inputs:
-      patches_ref:
-        description: "Ветка/тег RAMiK4/morphe-patches"
+      patches:
+        description: "Патчи Morphe: latest (стабильная), dev (последняя dev) или тег, напр. v1.48.0"
         required: false
-        default: "dev"
+        default: "latest"
         type: string
 
 permissions:
   contents: write
-  packages: read
 
 concurrency:
   group: release
   cancel-in-progress: false
 
 env:
-  PATCHES_REPO: RAMiK4/morphe-patches
+  PATCHES_REPO: MorpheApp/morphe-patches
   APP_TITLE: YouTube Morphe
+  APP_NAME: YouTube
   STRIPLIBS: arm64-v8a
-  EXPECTED_PACKAGE: com.hiby.music
   FORUM_URL: ""   # ссылка на тему 4PDA
 
 jobs:
@@ -33,30 +32,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Checkout patches
-        uses: actions/checkout@v5
-        with:
-          repository: ${{ env.PATCHES_REPO }}
-          ref: ${{ inputs.patches_ref }}
-          path: patches-src
-
       - name: Setup Java
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Build patches
-        working-directory: patches-src
+      - name: Download patches
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHANNEL: ${{ inputs.patches }}
         run: |
-          ./gradlew :patches:buildAndroid --no-daemon
-          cp patches/build/libs/patches-*.mpp "$RUNNER_TEMP/patches.mpp"
-          echo "PATCHES_SHA=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
+          case "$CHANNEL" in
+            ""|latest) REL=$(gh api "repos/$PATCHES_REPO/releases/latest") ;;
+            dev)       REL=$(gh api "repos/$PATCHES_REPO/releases?per_page=30" -q '[.[] | select(.prerelease)][0]') ;;
+            *)         REL=$(gh api "repos/$PATCHES_REPO/releases/tags/$CHANNEL") ;;
+          esac
+          TAG=$(echo "$REL" | jq -r .tag_name)
+          URL=$(echo "$REL" | jq -r '.assets[] | select(.name|endswith(".mpp")) | .url' | head -1)
+          [ -n "$URL" ] && [ "$URL" != null ] || { echo "::error::Не найден .mpp для '$CHANNEL'"; exit 1; }
+          gh api -H "Accept: application/octet-stream" "$URL" > "$RUNNER_TEMP/patches.mpp"
+          echo "Патчи: $TAG"
+          echo "PATCHES_TAG=$TAG" >> "$GITHUB_ENV"
+          echo "PATCHES_VER=${TAG#v}" >> "$GITHUB_ENV"
 
       - name: Download Morphe CLI
         run: |
@@ -75,24 +72,21 @@ jobs:
           AAPT=$(ls "$ANDROID_HOME"/build-tools/*/aapt | sort -V | tail -1)
           VER=$("$AAPT" dump badging "$SRC" | sed -n "s/.*versionName='\([^']*\)'.*/\1/p" | head -1)
           [ -n "$VER" ] || { echo "::error::Не удалось определить версию APK"; exit 1; }
+          echo "AAPT=$AAPT" >> "$GITHUB_ENV"
           echo "SRC_APK=$SRC" >> "$GITHUB_ENV"
           echo "YT_VERSION=$VER" >> "$GITHUB_ENV"
 
-      - name: Prepare options
+      - name: Prepare base options
         run: |
-          if [ ! -f options.json ]; then
-            echo "::warning::options.json не найден — создаю со значениями по умолчанию"
-            java -jar "$RUNNER_TEMP/morphe-cli.jar" options-create \
-              -p "$RUNNER_TEMP/patches.mpp" -o options.json -f com.google.android.youtube
-            echo "NEW_OPTIONS=1" >> "$GITHUB_ENV"
-          fi
-          cp options.json "$RUNNER_TEMP/options.json"
-          # Путь к своей иконке подставляется во время сборки
-          if [ -d branding ]; then
-            jq --arg p "$GITHUB_WORKSPACE/branding" \
-              '.[0].patches["Custom branding"].options.customIcon = $p' \
-              options.json > "$RUNNER_TEMP/options.json"
-          fi
+          CLI="$RUNNER_TEMP/morphe-cli.jar"
+          java -jar "$CLI" options-create -p "$RUNNER_TEMP/patches.mpp" \
+            -o "$RUNNER_TEMP/base.json" -f com.google.android.youtube
+          # Все патчи YouTube (без универсальных)
+          java -jar "$CLI" list-patches --patches "$RUNNER_TEMP/patches.mpp" \
+            --filter-package-name com.google.android.youtube \
+            --with-universal-patches=false --with-descriptions=false \
+            | sed -n 's/^Name: //p' | jq -R . | jq -s . > "$RUNNER_TEMP/yt-patches.json"
+          echo "Патчей YouTube: $(jq length "$RUNNER_TEMP/yt-patches.json")"
 
       - name: Restore keystore
         env:
@@ -104,98 +98,118 @@ jobs:
           fi
           echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/morphe.keystore"
 
-      - name: Patch
+      - name: Build variants
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          BUILD=${{ github.run_number }}
-          OUT="$RUNNER_TEMP/YouTube-Morphe-${YT_VERSION}-b${BUILD}.apk"
-          # Пустые секреты = значения Morphe по умолчанию (alias Morphe / пароль Morphe / пустой пароль хранилища)
-          java -jar "$RUNNER_TEMP/morphe-cli.jar" patch \
-            -p "$RUNNER_TEMP/patches.mpp" \
-            --options-file "$RUNNER_TEMP/options.json" \
-            --keystore "$RUNNER_TEMP/morphe.keystore" \
-            --keystore-password "${KEYSTORE_PASSWORD}" \
-            --keystore-entry-alias "${KEY_ALIAS:-Morphe}" \
-            --keystore-entry-password "${KEY_PASSWORD:-Morphe}" \
-            --striplibs "$STRIPLIBS" \
-            --force \
-            -t "$RUNNER_TEMP/tmp" \
-            -o "$OUT" \
-            "$SRC_APK"
-          echo "BUILD=$BUILD" >> "$GITHUB_ENV"
-          echo "OUT_APK=$OUT" >> "$GITHUB_ENV"
-
-      - name: Verify patching
-        run: |
-          # Защита: непропатченный APK (пакет не изменён) не публикуется
-          AAPT=$(ls "$ANDROID_HOME"/build-tools/*/aapt | sort -V | tail -1)
-          PKG=$("$AAPT" dump badging "$OUT_APK" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")
-          echo "Пакет: $PKG"
-          if [ "$PKG" != "$EXPECTED_PACKAGE" ]; then
-            echo "::error::Пакет $PKG вместо $EXPECTED_PACKAGE — APK не пропатчен или неверный options.json. Релиз не опубликован."
-            exit 1
-          fi
-          echo "PACKAGE=$PKG" >> "$GITHUB_ENV"
-
-      - name: Verify signature
-        env:
           CERT_SHA256: ${{ vars.CERT_SHA256 }}
         run: |
+          set -euo pipefail
+          BUILD=${{ github.run_number }}
+          TAG="v${YT_VERSION}-${PATCHES_VER}-b${BUILD}"
           APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
-          ACTUAL=$("$APKSIGNER" verify --print-certs "$OUT_APK" \
-            | sed -n 's/.*certificate SHA-256 digest: //p' | head -1 | tr 'A-F' 'a-f')
-          echo "Отпечаток подписи: $ACTUAL"
-          if [ -z "$CERT_SHA256" ]; then
-            echo "::warning::Переменная CERT_SHA256 не задана — проверка подписи пропущена"
-            exit 0
-          fi
-          EXPECTED=$(echo "$CERT_SHA256" | tr -d ': ' | tr 'A-F' 'a-f')
-          [ "$ACTUAL" = "$EXPECTED" ] || {
-            echo "::error::Подпись не совпадает с ожидаемой ($EXPECTED). Релиз не опубликован."
-            exit 1
+          mkdir -p "$RUNNER_TEMP/out"
+          echo "BUILD=$BUILD" >> "$GITHUB_ENV"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+
+          # $1 id, $2 суффикс файла, $3 пакет, $4 clone, $5 тёмная тема, $6 светлая тема
+          build_variant() {
+            local id=$1 suffix=$2 pkg=$3 clone=$4 dark=$5 light=$6
+            local opts="$RUNNER_TEMP/options-$id.json"
+            local out="$RUNNER_TEMP/out/YouTube-Morphe-${YT_VERSION}${suffix}.apk"
+            local icon="" header=""
+            [ -d branding/icon ] && icon="$GITHUB_WORKSPACE/branding/icon"
+            [ -d branding/header ] && header="$GITHUB_WORKSPACE/branding/header"
+
+            echo "::group::Вариант $id ($pkg)"
+            jq --slurpfile yt "$RUNNER_TEMP/yt-patches.json" \
+               --argjson clone "$clone" --arg pkg "$pkg" \
+               --arg dark "$dark" --arg light "$light" \
+               --arg name "$APP_NAME" --arg icon "$icon" --arg header "$header" '
+              def opt($p; $k; $v): if .[0].patches[$p] then .[0].patches[$p].options[$k] = $v
+                                   else error("Нет патча: " + $p) end;
+              .[0].patches |= with_entries(
+                .value.enabled = ((.key as $k | $yt[0] | index($k)) != null
+                                  or .key == "Change installer source")
+              )
+              | .[0].patches["Clone app"].enabled = $clone
+              | if $clone then opt("Clone app"; "packageName"; $pkg) else . end
+              | opt("Theme"; "darkThemeColor"; $dark)
+              | opt("Theme"; "lightThemeColor"; $light)
+              | opt("Custom branding"; "customName"; $name)
+              | if $icon != "" then opt("Custom branding"; "customIcon"; $icon) else . end
+              | if $header != "" then opt("Change header"; "custom"; $header) else . end
+            ' "$RUNNER_TEMP/base.json" > "$opts"
+            jq -r '.[0].patches | to_entries[] | select(.value.enabled) | "  ✓ \(.key)"' "$opts"
+
+            java -jar "$RUNNER_TEMP/morphe-cli.jar" patch \
+              -p "$RUNNER_TEMP/patches.mpp" \
+              --options-file "$opts" \
+              --keystore "$RUNNER_TEMP/morphe.keystore" \
+              --keystore-password "${KEYSTORE_PASSWORD}" \
+              --keystore-entry-alias "${KEY_ALIAS:-Morphe}" \
+              --keystore-entry-password "${KEY_PASSWORD:-Morphe}" \
+              --striplibs "$STRIPLIBS" \
+              --force \
+              -t "$RUNNER_TEMP/tmp-$id" \
+              -o "$out" \
+              "$SRC_APK"
+
+            # Проверка пакета: непропатченный или неверный APK не публикуется
+            local actual_pkg
+            actual_pkg=$("$AAPT" dump badging "$out" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")
+            echo "Пакет: $actual_pkg"
+            [ "$actual_pkg" = "$pkg" ] || { echo "::error::$id: пакет $actual_pkg вместо $pkg. Релиз не опубликован."; exit 1; }
+
+            # Проверка подписи
+            local cert
+            cert=$("$APKSIGNER" verify --print-certs "$out" | sed -n 's/.*certificate SHA-256 digest: //p' | head -1 | tr 'A-F' 'a-f')
+            echo "Подпись: $cert"
+            if [ -n "$CERT_SHA256" ]; then
+              local expected
+              expected=$(echo "$CERT_SHA256" | tr -d ': ' | tr 'A-F' 'a-f')
+              [ "$cert" = "$expected" ] || { echo "::error::$id: подпись не совпадает. Релиз не опубликован."; exit 1; }
+            else
+              echo "::warning::CERT_SHA256 не задан — проверка подписи пропущена"
+            fi
+
+            # update-<id>.json для проверки обновлений внутри приложения
+            local name changelog
+            name=$(basename "$out")
+            changelog=$(cat CHANGELOG.md 2>/dev/null || true)
+            jq -n \
+              --argjson build "$BUILD" --arg variant "$id" --arg pkg "$pkg" \
+              --arg yt "$YT_VERSION" --arg patches "$PATCHES_VER" --arg tag "$TAG" \
+              --arg apk "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$name" \
+              --arg page "https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG" \
+              --arg forum "$FORUM_URL" --arg changelog "$changelog" \
+              --arg sha "$(sha256sum "$out" | cut -d' ' -f1)" \
+              --argjson size "$(stat -c%s "$out")" \
+              '{build:$build, variant:$variant, package:$pkg, yt_version:$yt, patches:$patches,
+                tag:$tag, apk_url:$apk, release_url:$page, forum_url:$forum,
+                changelog:$changelog, sha256:$sha, size:$size}' \
+              > "$RUNNER_TEMP/out/update-$id.json"
+            echo "::endgroup::"
           }
 
-      - name: Write update.json
-        run: |
-          # Список изменений берётся из CHANGELOG.md (многострочный текст)
-          CHANGELOG=$(cat CHANGELOG.md 2>/dev/null || true)
-          printf '%s' "$CHANGELOG" > "$RUNNER_TEMP/changelog.txt"
-          TAG="v${YT_VERSION}-b${BUILD}"
-          NAME=$(basename "$OUT_APK")
-          jq -n \
-            --argjson build "$BUILD" \
-            --arg yt "$YT_VERSION" \
-            --arg tag "$TAG" \
-            --arg pkg "$PACKAGE" \
-            --arg apk "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$NAME" \
-            --arg page "https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG" \
-            --arg forum "$FORUM_URL" \
-            --arg changelog "$CHANGELOG" \
-            --arg sha "$(sha256sum "$OUT_APK" | cut -d' ' -f1)" \
-            --argjson size "$(stat -c%s "$OUT_APK")" \
-            '{build:$build, yt_version:$yt, package:$pkg, tag:$tag, apk_url:$apk, release_url:$page,
-              forum_url:$forum, changelog:$changelog, sha256:$sha, size:$size}' \
-            > "$RUNNER_TEMP/update.json"
-          cat "$RUNNER_TEMP/update.json"
-          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          #             id      суффикс  пакет                       clone  тёмная     светлая
+          build_variant hiby    "-HiBy"  com.hiby.music              true   "#0F0F0F"  "#F0F0F0"
+          build_variant morphe  ""       app.morphe.android.youtube  false  "in-app"   "in-app"
 
       - name: Publish release
         run: |
-          CHANGELOG=$(cat "$RUNNER_TEMP/changelog.txt")
-          printf '%s\n\n— YouTube %s · patches %s\n' "$CHANGELOG" "$YT_VERSION" "$PATCHES_SHA" > "$RUNNER_TEMP/notes.md"
-          gh release create "$TAG" "$OUT_APK" "$RUNNER_TEMP/update.json" \
-            --title "$APP_TITLE $YT_VERSION (сборка $BUILD)" \
+          {
+            cat CHANGELOG.md 2>/dev/null || true
+            echo
+            echo "| Файл | Пакет |"
+            echo "|---|---|"
+            echo "| \`YouTube-Morphe-${YT_VERSION}-HiBy.apk\` | \`com.hiby.music\` |"
+            echo "| \`YouTube-Morphe-${YT_VERSION}.apk\` | \`app.morphe.android.youtube\` |"
+            echo
+            echo "— YouTube ${YT_VERSION} · Morphe ${PATCHES_TAG}"
+          } > "$RUNNER_TEMP/notes.md"
+          gh release create "$TAG" "$RUNNER_TEMP"/out/* \
+            --title "$APP_TITLE $YT_VERSION · $PATCHES_TAG" \
             --notes-file "$RUNNER_TEMP/notes.md" \
             --latest
-
-      - name: Commit generated options.json
-        if: env.NEW_OPTIONS == '1'
-        run: |
-          git config user.name "RAMiK4"
-          git config user.email "60112744+RAMiK4@users.noreply.github.com"
-          git add options.json
-          git commit -m "Add default options.json"
-          git push
