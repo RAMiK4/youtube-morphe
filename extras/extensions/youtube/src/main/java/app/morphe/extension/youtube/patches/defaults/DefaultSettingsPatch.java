@@ -67,7 +67,7 @@ public final class DefaultSettingsPatch {
         done = true;
 
         try {
-            JSONObject defaults = new JSONObject(defaults());
+            JSONObject defaults = parseSettings(defaults());
             if (defaults.length() == 0) return;
 
             SharedPreferences preferences =
@@ -91,14 +91,22 @@ public final class DefaultSettingsPatch {
 
             // An import resets every setting it does not contain, so the current
             // settings of the user are part of it.
-            JSONObject merged = new JSONObject(Setting.exportToJson(null));
+            final String exported = Setting.exportToJson(null);
+            final boolean exportHasBraces = exported.trim().startsWith("{");
+            JSONObject merged = parseSettings(exported);
             for (Iterator<String> keys = pending.keys(); keys.hasNext(); ) {
                 String key = keys.next();
                 merged.put(key, pending.get(key));
             }
 
             final boolean firstRun = !SharedYouTubeSettings.SETTINGS_INITIALIZED.get();
-            final boolean rebootNeeded = Setting.importFromJSON(activity, merged.toString());
+            // Import the same format the export uses (Morphe writes the entries without braces).
+            String importText = merged.toString(2);
+            if (!exportHasBraces) {
+                importText = importText.substring(importText.indexOf('{') + 1,
+                        importText.lastIndexOf('}')).trim();
+            }
+            final boolean rebootNeeded = Setting.importFromJSON(activity, importText);
 
             for (Iterator<String> keys = pending.keys(); keys.hasNext(); ) {
                 applied.add(keys.next());
@@ -114,6 +122,19 @@ public final class DefaultSettingsPatch {
         } catch (Exception ex) {
             Logger.printException(() -> "Could not apply default settings", ex);
         }
+    }
+
+    /**
+     * Parses settings text with or without the enclosing braces.
+     */
+    private static JSONObject parseSettings(String text) throws Exception {
+        String trimmed = text == null ? "" : text.trim();
+        if (trimmed.isEmpty()) return new JSONObject();
+        if (!trimmed.startsWith("{")) {
+            if (trimmed.endsWith(",")) trimmed = trimmed.substring(0, trimmed.length() - 1);
+            trimmed = "{" + trimmed + "}";
+        }
+        return new JSONObject(trimmed);
     }
 
     private static void showRestartDialog(Activity activity) {
