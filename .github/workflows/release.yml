@@ -256,18 +256,26 @@ jobs:
             # updates/<id>.json для проверки обновлений внутри приложения (хранится в репозитории)
             local name changelog
             name=$(basename "$out")
-            changelog=$(cat CHANGELOG.md 2>/dev/null || true)
+            changelog=$(cat changelog/ru.md 2>/dev/null || true)
+            # Все языки: changelog/<язык>.md → {"ru": "...", "en": "..."}
+            local changelogs='{}'
+            for f in changelog/*.md; do
+              [ -f "$f" ] || continue
+              changelogs=$(jq --arg lang "$(basename "$f" .md)" --rawfile text "$f" \
+                '. + {($lang): ($text | rtrimstr("\n"))}' <<< "$changelogs")
+            done
             jq -n \
               --argjson build "$BUILD" --arg variant "$id" --arg pkg "$pkg" \
               --arg yt "$YT_VERSION" --arg patches "$PATCHES_VER" --arg tag "$TAG" \
               --arg apk "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$name" \
               --arg page "https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG" \
               --arg forum "$FORUM_URL" --arg changelog "$changelog" \
+              --argjson changelogs "$changelogs" \
               --arg sha "$(sha256sum "$out" | cut -d' ' -f1)" \
               --argjson size "$(stat -c%s "$out")" \
               '{build:$build, variant:$variant, package:$pkg, yt_version:$yt, patches:$patches,
                 tag:$tag, apk_url:$apk, release_url:$page, forum_url:$forum,
-                changelog:$changelog, sha256:$sha, size:$size}' \
+                changelog:$changelog, changelogs:$changelogs, sha256:$sha, size:$size}' \
               > "$RUNNER_TEMP/update-$id.json"
             echo "::endgroup::"
           }
@@ -295,7 +303,15 @@ jobs:
           HIBY=$(cat "$RUNNER_TEMP"/out/*BBK_Clone.apk.label)
           MORPHE=$(cat "$RUNNER_TEMP"/out/*Amoled_Mod.apk.label)
           {
-            cat CHANGELOG.md 2>/dev/null || true
+            cat changelog/ru.md 2>/dev/null || true
+            if [ -f changelog/en.md ]; then
+              echo
+              echo "<details><summary>English</summary>"
+              echo
+              cat changelog/en.md
+              echo
+              echo "</details>"
+            fi
             echo
             echo "| Файл | Пакет |"
             echo "|---|---|"

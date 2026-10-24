@@ -163,7 +163,7 @@ public final class UpdateCheckerPatch {
         final String apkUrl = json.optString("apk_url", json.optString("release_url"));
         final String version = str("morphe_update_dialog_version",
                 json.optString("yt_version"), json.optString("patches"));
-        final String changelog = json.optString("changelog").trim();
+        final String changelog = localizedChangelog(activity, json).trim();
         final String message = changelog.isEmpty() ? version : version + "\n\n" + changelog;
 
         var dialogPair = CustomDialog.create(
@@ -180,6 +180,33 @@ public final class UpdateCheckerPatch {
         );
 
         Utils.showDialog(activity, dialogPair.first);
+    }
+
+    /**
+     * Changelog in the app language, then English, then the default changelog (Russian).
+     */
+    private static String localizedChangelog(Activity activity, JSONObject json) {
+        JSONObject changelogs = json.optJSONObject("changelogs");
+        if (changelogs != null) {
+            String language = activityLanguage(activity);
+            // Russian is also the closest choice for these languages.
+            if (language.equals("uk") || language.equals("be") || language.equals("kk")) {
+                if (!changelogs.has(language)) language = "ru";
+            }
+            String text = changelogs.optString(language);
+            if (text.isEmpty()) text = changelogs.optString("en");
+            if (!text.isEmpty()) return text;
+        }
+        return json.optString("changelog");
+    }
+
+    private static String activityLanguage(Activity activity) {
+        try {
+            return activity.getResources().getConfiguration()
+                    .getLocales().get(0).getLanguage();
+        } catch (Exception ex) {
+            return java.util.Locale.getDefault().getLanguage();
+        }
     }
 
     private static void openUrl(Activity activity, String url) {
