@@ -37,7 +37,7 @@ public final class UpdateCheckerPatch {
     private static final LongSetting SKIPPED_BUILD =
             new LongSetting("morphe_update_skipped_build", 0L, false, false);
 
-    private static final long CHECK_INTERVAL_MS = 12 * 60 * 60 * 1000L;
+    private static final long CHECK_INTERVAL_MS = 3 * 60 * 60 * 1000L;
     private static final int TIMEOUT_MS = 10_000;
 
     private static volatile boolean checking;
