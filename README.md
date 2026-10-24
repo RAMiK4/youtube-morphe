@@ -33,8 +33,10 @@
 - `[Original+]` (`com.hiby.music`) — по умолчанию тёмная #0F0F0F, светлая #F0F0F0, текст цветом другой темы;
 - `[Amoled+]` (`app.morphe.android.youtube`) — по умолчанию тёмная #000000, светлая #FFFFFF.
 
-Включены все патчи YouTube + «Change installer source». Патчи собираются из официальной версии Morphe с дополнениями из `extras/`.
+Включены все патчи YouTube + «Change installer source» и дополнение [YaVoT](https://github.com/sashade8-ship-it/morphe-patches-yavot) (Yandex voice-over translation). Патчи собираются из официальной версии Morphe с дополнениями из `extras/`.
 
-Проверка обновлений внутри приложения (Настройки Morphe → Прочее → Обновления) читает `updates/hiby.json` и `updates/morphe.json`.
+Рекомендуемые настройки — `settings/defaults.json` (формат экспорта настроек Morphe). Каждая настройка применяется один раз: при первой установке или в обновлении, где она добавлена. Изменения пользователя сохраняются.
+
+Проверка обновлений внутри приложения (Настройки Morphe → Обновления) читает `updates/hiby.json` и `updates/morphe.json`.
 
 `branding/` — своя иконка (`mipmap-*`), логотип в шапке и значок уведомлений (`drawable-*`).

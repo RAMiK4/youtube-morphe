@@ -1,5 +1,5 @@
     <!-- extras: Update checker -->
-    <string name="morphe_update_category_title">Güncellemeler</string>
+    <string name="morphe_settings_screen_00_updates_title">Güncellemeler</string>
     <string name="morphe_update_check_title">Güncellemeleri denetle</string>
     <string name="morphe_update_check_summary">Açılışta yeni sürümü denetle</string>
     <string name="morphe_update_check_now_title">Şimdi denetle</string>
@@ -10,3 +10,6 @@
     <string name="morphe_update_dialog_skip">Bu sürümü atla</string>
     <string name="morphe_update_latest">En son sürümü kullanıyorsunuz</string>
     <string name="morphe_update_failed">Güncellemeler denetlenemedi</string>
+
+    <!-- extras: Default settings -->
+    <string name="morphe_defaults_restart_message">Yeni önerilen ayarlar uygulandı. Tamamının geçerli olması için uygulamayı yeniden başlatın.</string>

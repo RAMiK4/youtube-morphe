@@ -1,5 +1,5 @@
     <!-- extras: Update checker -->
-    <string name="morphe_update_category_title">Обновления</string>
+    <string name="morphe_settings_screen_00_updates_title">Обновления</string>
     <string name="morphe_update_check_title">Проверять обновления</string>
     <string name="morphe_update_check_summary">Проверять новую сборку при запуске</string>
     <string name="morphe_update_check_now_title">Проверить сейчас</string>
@@ -10,3 +10,6 @@
     <string name="morphe_update_dialog_skip">Пропустить версию</string>
     <string name="morphe_update_latest">Установлена последняя версия</string>
     <string name="morphe_update_failed">Не удалось проверить обновления</string>
+
+    <!-- extras: Default settings -->
+    <string name="morphe_defaults_restart_message">Применены новые рекомендуемые настройки. Перезапустите приложение, чтобы применить их полностью.</string>

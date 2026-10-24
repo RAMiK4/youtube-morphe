@@ -1,5 +1,5 @@
     <!-- extras: Update checker -->
-    <string name="morphe_update_category_title">Updates</string>
+    <string name="morphe_settings_screen_00_updates_title">Updates</string>
     <string name="morphe_update_check_title">Check for updates</string>
     <string name="morphe_update_check_summary">Check for a new build on startup</string>
     <string name="morphe_update_check_now_title">Check now</string>
@@ -10,3 +10,6 @@
     <string name="morphe_update_dialog_skip">Skip this version</string>
     <string name="morphe_update_latest">You have the latest version</string>
     <string name="morphe_update_failed">Could not check for updates</string>
+
+    <!-- extras: Default settings -->
+    <string name="morphe_defaults_restart_message">New recommended settings were applied. Restart the app to apply all of them.</string>

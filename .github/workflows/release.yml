@@ -24,6 +24,7 @@ concurrency:
 
 env:
   PATCHES_REPO: MorpheApp/morphe-patches
+  YAVOT_REPO: sashade8-ship-it/morphe-patches-yavot
   APP_TITLE: YouTube Morphe
   APP_NAME: YouTube
   STRIPLIBS: arm64-v8a
@@ -94,6 +95,14 @@ jobs:
           ./gradlew :patches:buildAndroid --no-daemon
           cp patches/build/libs/patches-*.mpp "$RUNNER_TEMP/patches.mpp"
 
+      - name: Download YaVoT add-on
+        run: |
+          TAG=$(gh api "repos/$YAVOT_REPO/releases/latest" -q .tag_name)
+          gh release download "$TAG" -R "$YAVOT_REPO" -p '*.mpp' -D "$RUNNER_TEMP/yavot"
+          mv "$RUNNER_TEMP"/yavot/*.mpp "$RUNNER_TEMP/yavot.mpp"
+          echo "YaVoT: $TAG"
+          echo "YAVOT_TAG=$TAG" >> "$GITHUB_ENV"
+
       - name: Download Morphe CLI
         run: |
           gh release download -R MorpheApp/morphe-cli -p 'morphe-desktop-*-all.jar' -D "$RUNNER_TEMP/cli"
@@ -118,8 +127,9 @@ jobs:
       - name: Prepare base options
         run: |
           CLI="$RUNNER_TEMP/morphe-cli.jar"
-          java -jar "$CLI" options-create -p "$RUNNER_TEMP/patches.mpp" \
+          java -jar "$CLI" options-create -p "$RUNNER_TEMP/patches.mpp" -p "$RUNNER_TEMP/yavot.mpp" \
             -o "$RUNNER_TEMP/base.json" -f com.google.android.youtube
+          [ "$(jq length "$RUNNER_TEMP/base.json")" -eq 2 ] || { echo "::error::Ожидалось 2 набора патчей в options"; exit 1; }
           # Все патчи YouTube (без универсальных)
           java -jar "$CLI" list-patches --patches "$RUNNER_TEMP/patches.mpp" \
             --filter-package-name com.google.android.youtube \
@@ -186,6 +196,7 @@ jobs:
                --arg updurl "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/main/updates/$id.json" \
                --arg build "$BUILD" \
                --arg verinfo "Build $BUILD · YouTube $YT_VERSION · Morphe $PATCHES_VER" \
+               --arg defaults "$(jq -c . settings/defaults.json)" \
                --arg name "$APP_NAME" --arg icon "$icon" --arg header "$header" '
               def opt($p; $k; $v): if .[0].patches[$p] then .[0].patches[$p].options[$k] = $v
                                    else error("Нет патча: " + $p) end;
@@ -201,14 +212,18 @@ jobs:
               | opt("Update checker"; "updateUrl"; $updurl)
               | opt("Update checker"; "buildNumber"; $build)
               | opt("Update checker"; "versionInfo"; $verinfo)
+              | opt("Default settings"; "settings"; $defaults)
+              # Дополнения (YaVoT): все патчи включены
+              | .[range(1; length)].patches |= with_entries(.value.enabled = true)
               | opt("Custom branding"; "customName"; $name)
               | if $icon != "" then opt("Custom branding"; "customIcon"; $icon) else . end
               | if $header != "" then opt("Change header"; "custom"; $header) else . end
             ' "$RUNNER_TEMP/base.json" > "$opts"
-            jq -r '.[0].patches | to_entries[] | select(.value.enabled) | "  ✓ \(.key)"' "$opts"
+            jq -r '.[].patches | to_entries[] | select(.value.enabled) | "  ✓ \(.key)"' "$opts"
 
             java -jar "$RUNNER_TEMP/morphe-cli.jar" patch \
               -p "$RUNNER_TEMP/patches.mpp" \
+              -p "$RUNNER_TEMP/yavot.mpp" \
               --options-file "$opts" \
               --keystore "$RUNNER_TEMP/morphe.keystore" \
               --keystore-password "${KEYSTORE_PASSWORD}" \
@@ -287,7 +302,7 @@ jobs:
             echo "| \`$MORPHE\` | \`app.morphe.android.youtube\` |"
             echo "| \`$HIBY\` | \`com.hiby.music\` |"
             echo
-            echo "— YouTube ${YT_VERSION} · Morphe ${PATCHES_TAG}"
+            echo "— YouTube ${YT_VERSION} · Morphe ${PATCHES_TAG} · YaVoT ${YAVOT_TAG}"
           } > "$RUNNER_TEMP/notes.md"
           FILES=()
           for f in "$RUNNER_TEMP"/out/*.apk; do FILES+=("$f#$(cat "$f.label")"); done

@@ -3,10 +3,10 @@ package app.morphe.patches.youtube.misc.updates
 import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
+import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patcher.patch.stringOption
 import app.morphe.patcher.util.returnEarly
 import app.morphe.patches.shared.misc.settings.preference.NonInteractivePreference
-import app.morphe.patches.shared.misc.settings.preference.PreferenceCategory
 import app.morphe.patches.shared.misc.settings.preference.PreferenceScreenPreference
 import app.morphe.patches.shared.misc.settings.preference.SwitchPreference
 import app.morphe.patches.youtube.misc.extension.sharedExtensionPatch
@@ -14,12 +14,26 @@ import app.morphe.patches.youtube.misc.settings.PreferenceScreen
 import app.morphe.patches.youtube.misc.settings.settingsPatch
 import app.morphe.patches.youtube.shared.Constants.COMPATIBILITY_YOUTUBE
 import app.morphe.patches.youtube.shared.YouTubeActivityOnCreateFingerprint
+import app.morphe.util.ResourceGroup
+import app.morphe.util.copyResources
 
 private const val EXTENSION_CLASS =
     "Lapp/morphe/extension/youtube/patches/updates/UpdateCheckerPatch;"
 
 private const val PREFERENCE_CLASS =
     "app.morphe.extension.youtube.settings.preference.UpdateCheckPreference"
+
+// Sorted by key in the root menu: right below "About" (00_about).
+private const val SCREEN_KEY = "morphe_settings_screen_00_updates"
+
+private val updateCheckerResourcePatch = resourcePatch {
+    execute {
+        copyResources(
+            "updates",
+            ResourceGroup("drawable", "$SCREEN_KEY.xml", "${SCREEN_KEY}_bold.xml"),
+        )
+    }
+}
 
 @Suppress("unused")
 val updateCheckerPatch = bytecodePatch(
@@ -29,6 +43,7 @@ val updateCheckerPatch = bytecodePatch(
     dependsOn(
         sharedExtensionPatch,
         settingsPatch,
+        updateCheckerResourcePatch,
     )
 
     compatibleWith(COMPATIBILITY_YOUTUBE)
@@ -58,19 +73,19 @@ val updateCheckerPatch = bytecodePatch(
         val url = updateUrl.orEmpty().trim()
         if (url.isEmpty()) return@execute
 
-        PreferenceScreen.MISC.addPreferences(
-            PreferenceCategory(
-                key = "morphe_update_category",
-                titleKey = "morphe_update_category_title",
-                sorting = PreferenceScreenPreference.Sorting.UNSORTED,
-                preferences = setOf(
-                    SwitchPreference("morphe_update_check", summary = true),
-                    NonInteractivePreference(
-                        key = "morphe_update_check_now",
-                        tag = PREFERENCE_CLASS,
-                        selectable = true,
-                    ),
-                ),
+        PreferenceScreen.Screen(
+            key = SCREEN_KEY,
+            summaryKey = null,
+            icon = "@drawable/$SCREEN_KEY",
+            iconBold = "@drawable/${SCREEN_KEY}_bold",
+            layout = "@layout/preference_with_icon",
+            sorting = PreferenceScreenPreference.Sorting.UNSORTED,
+        ).addPreferences(
+            SwitchPreference("morphe_update_check", summary = true),
+            NonInteractivePreference(
+                key = "morphe_update_check_now",
+                tag = PREFERENCE_CLASS,
+                selectable = true,
             ),
         )
 
