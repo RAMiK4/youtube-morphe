@@ -1,0 +1,13 @@
+{
+  "build": 9999,
+  "variant": "morphe",
+  "yt_version": "21.42.243",
+  "patches": "1.48.0",
+  "tag": "test",
+  "apk_url": "https://github.com/RAMiK4/youtube-morphe/releases",
+  "release_url": "https://github.com/RAMiK4/youtube-morphe/releases",
+  "forum_url": "",
+  "changelog": "✓ Тестовое уведомление об обновлении\n✓ Проверка обновлений внутри приложения",
+  "sha256": "",
+  "size": 0
+}
