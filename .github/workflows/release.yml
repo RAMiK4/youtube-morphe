@@ -129,6 +129,17 @@ jobs:
           CERT_SHA256: ${{ vars.CERT_SHA256 }}
         run: |
           set -euo pipefail
+          # Весь вывод в лог; при ошибке ключевые строки выводятся как аннотации (видны без входа)
+          LOG="$RUNNER_TEMP/build.log"
+          exec > >(tee -a "$LOG") 2>&1
+          report() {
+            sleep 1
+            grep -E "SEVERE|Exception|error|Error|failed|Failed|Нет патча|не найден" "$LOG" \
+              | grep -v "^::" | tail -n 9 | cut -c1-900 \
+              | sed -e 's/%/%25/g' -e 's/\r/%0D/g' \
+              | while IFS= read -r line; do echo "::error::$line"; done
+          }
+          trap report ERR
           BUILD=${{ github.run_number }}
           TAG="v${YT_VERSION}-${PATCHES_VER}-b${BUILD}"
           APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
