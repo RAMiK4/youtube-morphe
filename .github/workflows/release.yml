@@ -21,6 +21,7 @@ env:
   PATCHES_REPO: RAMiK4/morphe-patches
   APP_TITLE: YouTube Morphe
   STRIPLIBS: arm64-v8a
+  EXPECTED_PACKAGE: com.hiby.music
   FORUM_URL: ""   # ссылка на тему 4PDA
 
 jobs:
@@ -133,8 +134,8 @@ jobs:
           AAPT=$(ls "$ANDROID_HOME"/build-tools/*/aapt | sort -V | tail -1)
           PKG=$("$AAPT" dump badging "$OUT_APK" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")
           echo "Пакет: $PKG"
-          if [ "$PKG" = "com.google.android.youtube" ]; then
-            echo "::error::APK не пропатчен (пакет не изменён). Возможно, версия YouTube не поддерживается."
+          if [ "$PKG" != "$EXPECTED_PACKAGE" ]; then
+            echo "::error::Пакет $PKG вместо $EXPECTED_PACKAGE — APK не пропатчен или неверный options.json. Релиз не опубликован."
             exit 1
           fi
           echo "PACKAGE=$PKG" >> "$GITHUB_ENV"
