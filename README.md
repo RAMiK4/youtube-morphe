@@ -1,42 +1,35 @@
 # YouTube Morphe
 
-Сборки YouTube с официальными патчами [Morphe](https://github.com/MorpheApp/morphe-patches).
+YouTube patched with [Morphe](https://github.com/MorpheApp/morphe-patches) and the [YaVoT](https://github.com/sashade8-ship-it/morphe-patches-yavot) Yandex voice-over translation add-on.
 
-**Скачать:** [последний релиз](https://github.com/RAMiK4/youtube-morphe/releases/latest)
+[![Latest release](https://img.shields.io/github/v/release/RAMiK4/youtube-morphe?label=Download&sort=date)](https://github.com/RAMiK4/youtube-morphe/releases/latest)
 
-| Файл | Пакет |
-|---|---|
-| `YouTube_Morphe-v<версия>-p<патчи>_[Original+]_Mod_(BBK Clone).apk` | `com.hiby.music` |
-| `YouTube_Morphe-v<версия>-p<патчи>_[Amoled+]_Mod.apk` | `app.morphe.android.youtube` |
+## Variants
 
-Сборки подписаны тем же ключом, что и версии с 4PDA, поэтому обновление устанавливается поверх без удаления.
-
----
-
-## Сборка (для автора)
-
-1. **Releases → Draft a new release**, тег `source`, прикрепить оригинальный APK YouTube и сохранить как черновик. При смене версии YouTube заменить APK в этом черновике.
-2. Список изменений (на английском, только YouTube) создаётся из Morphe автоматически. При необходимости перевод для приложения — `changelog/<язык>.md` с первой строкой `<!-- версия патчей -->`. Затем **Actions → Release YouTube Morphe → Run workflow** (патчи: `latest`, `dev` или тег, напр. `v1.48.0`).
-
-Секреты (Settings → Secrets and variables → Actions):
-
-| Имя | Тип | Значение |
+| Variant | Package | Default theme |
 |---|---|---|
-| `KEYSTORE_B64` | secret | keystore в base64 |
-| `KEYSTORE_PASSWORD` | secret | пароль хранилища (пусто — по умолчанию) |
-| `KEY_ALIAS` | secret | alias ключа (пусто — `Morphe`) |
-| `KEY_PASSWORD` | secret | пароль ключа (пусто — `Morphe`) |
-| `CERT_SHA256` | variable | отпечаток SHA-256 сертификата для проверки подписи |
+| `[Amoled+]` | `app.morphe.android.youtube` | Pure black / white |
+| `[Original+]` `(BBK Clone)` | `com.hiby.music` | YouTube dark `#0F0F0F` / light `#F0F0F0` |
 
-Собираются два варианта, в обоих цвета темы меняются в настройках приложения:
+Both variants can be installed side by side. Theme colors can be changed at any time in the Morphe settings.
 
-- `[Original+]` (`com.hiby.music`) — по умолчанию тёмная #0F0F0F, светлая #F0F0F0, текст цветом другой темы;
-- `[Amoled+]` (`app.morphe.android.youtube`) — по умолчанию тёмная #000000, светлая #FFFFFF.
+## Features
 
-Включены все патчи YouTube + «Change installer source» и дополнение [YaVoT](https://github.com/sashade8-ship-it/morphe-patches-yavot) (Yandex voice-over translation). Патчи собираются из официальной версии Morphe с дополнениями из `extras/`.
+- All Morphe patches for YouTube
+- Yandex voice-over translation
+- In-app update check: *Morphe settings → Updates*
+- Recommended settings on first install — your own changes are always kept
 
-Рекомендуемые настройки — `settings/defaults.json` (формат экспорта настроек Morphe). Каждая настройка применяется один раз: при первой установке или в обновлении, где она добавлена. Изменения пользователя сохраняются.
+## Install
 
-Проверка обновлений внутри приложения (Настройки Morphe → Обновления) читает `updates/hiby.json` и `updates/morphe.json`.
+1. Download the APK of your variant from the [latest release](https://github.com/RAMiK4/youtube-morphe/releases/latest).
+2. Install it. To sign in with a Google account, [MicroG-RE](https://morphe.software/microg) is required.
 
-`branding/` — своя иконка (`mipmap-*`), логотип в шапке и значок уведомлений (`drawable-*`).
+Updates install over the previous version without losing data. Builds are signed with the same key as the builds published on 4PDA.
+
+## Credits
+
+- [Morphe](https://github.com/MorpheApp) — patches
+- [YaVoT](https://github.com/sashade8-ship-it/morphe-patches-yavot) — Yandex voice-over translation
+
+This project is not affiliated with Google, YouTube or Morphe.

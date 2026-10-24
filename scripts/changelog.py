@@ -47,6 +47,14 @@ def parse(path):
     return sections
 
 
+GROUP_ORDER = ("feature", "fix", "app support")
+
+
+def group_rank(title):
+    title = title.lower()
+    return next((i for i, word in enumerate(GROUP_ORDER) if word in title), len(GROUP_ORDER))
+
+
 def select(sections, version):
     index = next((i for i, s in enumerate(sections) if s["version"] == version), None)
     if index is None:
@@ -72,7 +80,8 @@ def main():
         if many:
             md.append(f"### {section['version']}\n")
             txt.append(section["version"])
-        for group in section["groups"]:
+        # New features first, then bug fixes, then app support.
+        for group in sorted(section["groups"], key=lambda g: group_rank(g["title"])):
             if not group["items"]:
                 continue
             md.append(f"{'####' if many else '###'} {group['title']}\n")
