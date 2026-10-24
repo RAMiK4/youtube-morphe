@@ -66,6 +66,14 @@ jobs:
           ref: ${{ env.PATCHES_TAG }}
           path: patches-src
 
+      - name: Generate changelog
+        run: |
+          # YouTube-часть списка изменений Morphe: стабильная версия — свой раздел,
+          # dev — все dev-разделы после предыдущей стабильной (новые сверху)
+          python3 -I scripts/changelog.py patches-src/CHANGELOG.md "$PATCHES_VER" \
+            "$RUNNER_TEMP/changes.md" "$RUNNER_TEMP/changes.txt"
+          cat "$RUNNER_TEMP/changes.txt"
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
@@ -256,13 +264,19 @@ jobs:
             # updates/<id>.json для проверки обновлений внутри приложения (хранится в репозитории)
             local name changelog
             name=$(basename "$out")
-            changelog=$(cat changelog/ru.md 2>/dev/null || true)
-            # Все языки: changelog/<язык>.md → {"ru": "...", "en": "..."}
-            local changelogs='{}'
+            # Английский — из Morphe; другие языки — changelog/<язык>.md,
+            # только если первая строка <!-- версия --> совпадает с версией патчей
+            changelog=$(cat "$RUNNER_TEMP/changes.txt")
+            local changelogs
+            changelogs=$(jq -n --rawfile text "$RUNNER_TEMP/changes.txt" '{en: ($text | rtrimstr("\n"))}')
             for f in changelog/*.md; do
               [ -f "$f" ] || continue
-              changelogs=$(jq --arg lang "$(basename "$f" .md)" --rawfile text "$f" \
-                '. + {($lang): ($text | rtrimstr("\n"))}' <<< "$changelogs")
+              if [ "$(head -n1 "$f" | tr -d '[:space:]')" != "<!--${PATCHES_VER}-->" ]; then
+                echo "::warning::$f не для версии $PATCHES_VER — пропущен"
+                continue
+              fi
+              changelogs=$(jq --arg lang "$(basename "$f" .md)" --arg text "$(tail -n +2 "$f")" \
+                '. + {($lang): $text}' <<< "$changelogs")
             done
             jq -n \
               --argjson build "$BUILD" --arg variant "$id" --arg pkg "$pkg" \
@@ -303,17 +317,9 @@ jobs:
           HIBY=$(cat "$RUNNER_TEMP"/out/*BBK_Clone.apk.label)
           MORPHE=$(cat "$RUNNER_TEMP"/out/*Amoled_Mod.apk.label)
           {
-            cat changelog/ru.md 2>/dev/null || true
-            if [ -f changelog/en.md ]; then
-              echo
-              echo "<details><summary>English</summary>"
-              echo
-              cat changelog/en.md
-              echo
-              echo "</details>"
-            fi
+            cat "$RUNNER_TEMP/changes.md"
             echo
-            echo "| Файл | Пакет |"
+            echo "| File | Package |"
             echo "|---|---|"
             echo "| \`$MORPHE\` | \`app.morphe.android.youtube\` |"
             echo "| \`$HIBY\` | \`com.hiby.music\` |"
