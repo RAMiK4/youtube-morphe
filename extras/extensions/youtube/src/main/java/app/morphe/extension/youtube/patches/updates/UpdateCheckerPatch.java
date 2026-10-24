@@ -60,7 +60,7 @@ public final class UpdateCheckerPatch {
         return "";
     }
 
-    private static long currentBuildNumber() {
+    public static long currentBuildNumber() {
         try {
             return Long.parseLong(currentBuild().trim());
         } catch (NumberFormatException ex) {

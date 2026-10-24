@@ -5,7 +5,7 @@
     <string name="morphe_update_check_now_title">Check now</string>
     <string name="morphe_update_check_now_summary">Check for a new build</string>
     <string name="morphe_update_dialog_title">Update available</string>
-    <string name="morphe_update_dialog_version">YouTube %1$s · Morphe %2$s</string>
+    <string name="morphe_update_dialog_version">YouTube Morphe v%1$s p%2$s</string>
     <string name="morphe_update_dialog_download">Download</string>
     <string name="morphe_update_dialog_skip">Skip this version</string>
     <string name="morphe_update_latest">You have the latest version</string>
@@ -13,3 +13,4 @@
 
     <!-- extras: Default settings -->
     <string name="morphe_defaults_restart_message">New recommended settings were applied. Restart the app to apply all of them.</string>
+    <string name="morphe_extras_restart_updated">The app was updated. Restart it so that the settings and the layout are applied correctly.</string>

@@ -167,7 +167,7 @@ jobs:
           }
           trap report ERR
           BUILD=${{ github.run_number }}
-          TAG="v${YT_VERSION}-${PATCHES_VER}-b${BUILD}"
+          TAG="v${YT_VERSION}-p${PATCHES_VER}-b${BUILD}"
           APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
           mkdir -p "$RUNNER_TEMP/out"
           echo "BUILD=$BUILD" >> "$GITHUB_ENV"
@@ -195,7 +195,7 @@ jobs:
                --argjson theme "$theme" \
                --arg updurl "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/main/updates/$id.json" \
                --arg build "$BUILD" \
-               --arg verinfo "Build $BUILD · YouTube $YT_VERSION · Morphe $PATCHES_VER" \
+               --arg verinfo "v$YT_VERSION p$PATCHES_VER · Build $BUILD" \
                --arg defaults "$(jq -c . settings/defaults.json)" \
                --arg name "$APP_NAME" --arg icon "$icon" --arg header "$header" '
               def opt($p; $k; $v): if .[0].patches[$p] then .[0].patches[$p].options[$k] = $v
@@ -301,13 +301,11 @@ jobs:
             echo "|---|---|"
             echo "| \`$MORPHE\` | \`app.morphe.android.youtube\` |"
             echo "| \`$HIBY\` | \`com.hiby.music\` |"
-            echo
-            echo "— YouTube ${YT_VERSION} · Morphe ${PATCHES_TAG} · YaVoT ${YAVOT_TAG}"
           } > "$RUNNER_TEMP/notes.md"
           FILES=()
           for f in "$RUNNER_TEMP"/out/*.apk; do FILES+=("$f#$(cat "$f.label")"); done
           gh release create "$TAG" "${FILES[@]}" \
-            --title "$APP_TITLE $YT_VERSION · $PATCHES_TAG" \
+            --title "$APP_TITLE v$YT_VERSION p$PATCHES_VER (Mod)" \
             --notes-file "$RUNNER_TEMP/notes.md" \
             --latest
 
