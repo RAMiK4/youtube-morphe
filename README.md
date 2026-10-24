@@ -1,6 +1,6 @@
 # YouTube Morphe
 
-Сборки YouTube с патчами [Morphe](https://github.com/MorpheApp/morphe-patches) и дополнениями из [RAMiK4/morphe-patches](https://github.com/RAMiK4/morphe-patches).
+Сборки YouTube с официальными патчами [Morphe](https://github.com/MorpheApp/morphe-patches).
 
 **Скачать:** [последний релиз](https://github.com/RAMiK4/youtube-morphe/releases/latest)
 
