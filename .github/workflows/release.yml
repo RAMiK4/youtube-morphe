@@ -120,11 +120,24 @@ jobs:
             --keystore-entry-alias "${KEY_ALIAS:-Morphe}" \
             --keystore-entry-password "${KEY_PASSWORD:-Morphe}" \
             --striplibs "$STRIPLIBS" \
+            --force \
             -t "$RUNNER_TEMP/tmp" \
             -o "$OUT" \
             "$SRC_APK"
           echo "BUILD=$BUILD" >> "$GITHUB_ENV"
           echo "OUT_APK=$OUT" >> "$GITHUB_ENV"
+
+      - name: Verify patching
+        run: |
+          # Защита: непропатченный APK (пакет не изменён) не публикуется
+          AAPT=$(ls "$ANDROID_HOME"/build-tools/*/aapt | sort -V | tail -1)
+          PKG=$("$AAPT" dump badging "$OUT_APK" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")
+          echo "Пакет: $PKG"
+          if [ "$PKG" = "com.google.android.youtube" ]; then
+            echo "::error::APK не пропатчен (пакет не изменён). Возможно, версия YouTube не поддерживается."
+            exit 1
+          fi
+          echo "PACKAGE=$PKG" >> "$GITHUB_ENV"
 
       - name: Verify signature
         env:
@@ -155,13 +168,14 @@ jobs:
             --argjson build "$BUILD" \
             --arg yt "$YT_VERSION" \
             --arg tag "$TAG" \
+            --arg pkg "$PACKAGE" \
             --arg apk "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$NAME" \
             --arg page "https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG" \
             --arg forum "$FORUM_URL" \
             --arg changelog "$CHANGELOG" \
             --arg sha "$(sha256sum "$OUT_APK" | cut -d' ' -f1)" \
             --argjson size "$(stat -c%s "$OUT_APK")" \
-            '{build:$build, yt_version:$yt, tag:$tag, apk_url:$apk, release_url:$page,
+            '{build:$build, yt_version:$yt, package:$pkg, tag:$tag, apk_url:$apk, release_url:$page,
               forum_url:$forum, changelog:$changelog, sha256:$sha, size:$size}' \
             > "$RUNNER_TEMP/update.json"
           cat "$RUNNER_TEMP/update.json"
