@@ -16,7 +16,7 @@
 ## Сборка (для автора)
 
 1. **Releases → Draft a new release**, тег `source`, прикрепить оригинальный APK YouTube и сохранить как черновик. При смене версии YouTube заменить APK в этом черновике.
-2. Список изменений на английском создаётся из Morphe автоматически; переводы для приложения — `changelog/<язык>.md` с первой строкой `<!-- версия патчей -->`. Затем **Actions → Release YouTube Morphe → Run workflow** (патчи: `latest`, `dev` или тег, напр. `v1.48.0`).
+2. Список изменений (на английском, только YouTube) создаётся из Morphe автоматически. При необходимости перевод для приложения — `changelog/<язык>.md` с первой строкой `<!-- версия патчей -->`. Затем **Actions → Release YouTube Morphe → Run workflow** (патчи: `latest`, `dev` или тег, напр. `v1.48.0`).
 
 Секреты (Settings → Secrets and variables → Actions):
 
