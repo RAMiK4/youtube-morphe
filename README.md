@@ -6,8 +6,8 @@
 
 | Файл | Пакет |
 |---|---|
-| `YouTube-Morphe-<версия>-HiBy.apk` | `com.hiby.music` |
-| `YouTube-Morphe-<версия>.apk` | `app.morphe.android.youtube` |
+| `YouTube_Morphe-v<версия>-p<патчи>_[Original+BBK]_Mod_(Clone).apk` | `com.hiby.music` |
+| `YouTube_Morphe-v<версия>-p<патчи>_[Amoled+]_Mod.apk` | `app.morphe.android.youtube` |
 
 Сборки подписаны тем же ключом, что и версии с 4PDA, поэтому обновление устанавливается поверх без удаления.
 
@@ -28,6 +28,6 @@
 | `KEY_PASSWORD` | secret | пароль ключа (пусто — `Morphe`) |
 | `CERT_SHA256` | variable | отпечаток SHA-256 сертификата для проверки подписи |
 
-Собираются два варианта: `-HiBy` (пакет `com.hiby.music`, тема #0F0F0F / #F0F0F0) и стандартный (`app.morphe.android.youtube`, тема меняется в приложении). Включены все патчи YouTube + «Change installer source».
+Собираются два варианта: `(Clone)` (пакет `com.hiby.music`, тема #0F0F0F / #F0F0F0) и стандартный (`app.morphe.android.youtube`, тема меняется в приложении). Включены все патчи YouTube + «Change installer source».
 
-`branding/icon/` — своя иконка (`mipmap-*`), `branding/header/` — свой логотип в шапке (`drawable-*`).
+`branding/` — своя иконка (`mipmap-*`), логотип в шапке и значок уведомлений (`drawable-*`).

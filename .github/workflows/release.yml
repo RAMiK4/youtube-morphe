@@ -113,14 +113,21 @@ jobs:
           echo "BUILD=$BUILD" >> "$GITHUB_ENV"
           echo "TAG=$TAG" >> "$GITHUB_ENV"
 
-          # $1 id, $2 суффикс файла, $3 пакет, $4 clone, $5 тёмная тема, $6 светлая тема
+          # Одна папка branding/: mipmap-* (иконка), drawable-* (логотип в шапке + значок уведомлений)
+          ICON=""; HEADER=""
+          ls -d branding/mipmap-* >/dev/null 2>&1 && ICON="$GITHUB_WORKSPACE/branding"
+          ls branding/drawable-*/morphe_header_custom_*.png >/dev/null 2>&1 && HEADER="$GITHUB_WORKSPACE/branding"
+
+          # $1 id, $2 метка в имени файла, $3 безопасное имя, $4 пакет, $5 clone, $6 тёмная, $7 светлая
           build_variant() {
-            local id=$1 suffix=$2 pkg=$3 clone=$4 dark=$5 light=$6
+            local id=$1 label=$2 safe=$3 pkg=$4 clone=$5 dark=$6 light=$7
             local opts="$RUNNER_TEMP/options-$id.json"
-            local out="$RUNNER_TEMP/out/YouTube-Morphe-${YT_VERSION}${suffix}.apk"
-            local icon="" header=""
-            [ -d branding/icon ] && icon="$GITHUB_WORKSPACE/branding/icon"
-            [ -d branding/header ] && header="$GITHUB_WORKSPACE/branding/header"
+            local base="YouTube_Morphe-v${YT_VERSION}-p${PATCHES_VER}"
+            # GitHub заменяет [ ] ( ) + в именах файлов, поэтому имя файла безопасное,
+            # а точное имя в формате 4PDA показывается как подпись (label)
+            local out="$RUNNER_TEMP/out/${base}_${safe}.apk"
+            echo "${base}_${label}.apk" > "$out.label"
+            local icon="$ICON" header="$HEADER"
 
             echo "::group::Вариант $id ($pkg)"
             jq --slurpfile yt "$RUNNER_TEMP/yt-patches.json" \
@@ -193,23 +200,29 @@ jobs:
             echo "::endgroup::"
           }
 
-          #             id      суффикс  пакет                       clone  тёмная     светлая
-          build_variant hiby    "-HiBy"  com.hiby.music              true   "#0F0F0F"  "#F0F0F0"
-          build_variant morphe  ""       app.morphe.android.youtube  false  "in-app"   "in-app"
+          build_variant hiby   "[Original+BBK]_Mod_(Clone)" "Original_BBK_Mod_Clone" \
+                        com.hiby.music              true  "#0F0F0F" "#F0F0F0"
+          build_variant morphe "[Amoled+]_Mod"              "Amoled_Mod" \
+                        app.morphe.android.youtube  false "in-app"  "in-app"
 
       - name: Publish release
         run: |
+          HIBY=$(cat "$RUNNER_TEMP"/out/*Clone.apk.label)
+          MORPHE=$(cat "$RUNNER_TEMP"/out/*Amoled_Mod.apk.label)
           {
             cat CHANGELOG.md 2>/dev/null || true
             echo
             echo "| Файл | Пакет |"
             echo "|---|---|"
-            echo "| \`YouTube-Morphe-${YT_VERSION}-HiBy.apk\` | \`com.hiby.music\` |"
-            echo "| \`YouTube-Morphe-${YT_VERSION}.apk\` | \`app.morphe.android.youtube\` |"
+            echo "| \`$MORPHE\` | \`app.morphe.android.youtube\` |"
+            echo "| \`$HIBY\` | \`com.hiby.music\` |"
             echo
             echo "— YouTube ${YT_VERSION} · Morphe ${PATCHES_TAG}"
           } > "$RUNNER_TEMP/notes.md"
-          gh release create "$TAG" "$RUNNER_TEMP"/out/* \
+          FILES=()
+          for f in "$RUNNER_TEMP"/out/*.apk; do FILES+=("$f#$(cat "$f.label")"); done
+          FILES+=("$RUNNER_TEMP"/out/update-*.json)
+          gh release create "$TAG" "${FILES[@]}" \
             --title "$APP_TITLE $YT_VERSION · $PATCHES_TAG" \
             --notes-file "$RUNNER_TEMP/notes.md" \
             --latest
