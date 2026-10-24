@@ -3,10 +3,6 @@ name: Release YouTube Morphe
 on:
   workflow_dispatch:
     inputs:
-      changelog:
-        description: "Список изменений (RU, каждая строка с ✓)"
-        required: false
-        type: string
       patches_ref:
         description: "Ветка/тег RAMiK4/morphe-patches"
         required: false
@@ -149,9 +145,10 @@ jobs:
           }
 
       - name: Write update.json
-        env:
-          CHANGELOG: ${{ inputs.changelog }}
         run: |
+          # Список изменений берётся из CHANGELOG.md (многострочный текст)
+          CHANGELOG=$(cat CHANGELOG.md 2>/dev/null || true)
+          printf '%s' "$CHANGELOG" > "$RUNNER_TEMP/changelog.txt"
           TAG="v${YT_VERSION}-b${BUILD}"
           NAME=$(basename "$OUT_APK")
           jq -n \
@@ -171,9 +168,8 @@ jobs:
           echo "TAG=$TAG" >> "$GITHUB_ENV"
 
       - name: Publish release
-        env:
-          CHANGELOG: ${{ inputs.changelog }}
         run: |
+          CHANGELOG=$(cat "$RUNNER_TEMP/changelog.txt")
           printf '%s\n\n— YouTube %s · patches %s\n' "$CHANGELOG" "$YT_VERSION" "$PATCHES_SHA" > "$RUNNER_TEMP/notes.md"
           gh release create "$TAG" "$OUT_APK" "$RUNNER_TEMP/update.json" \
             --title "$APP_TITLE $YT_VERSION (сборка $BUILD)" \

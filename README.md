@@ -11,7 +11,7 @@
 ## Сборка (для автора)
 
 1. **Releases → Draft a new release**, тег `source`, прикрепить оригинальный APK YouTube и сохранить как черновик. При смене версии YouTube заменить APK в этом черновике.
-2. **Actions → Release YouTube Morphe → Run workflow**, вставить список изменений.
+2. Обновить `CHANGELOG.md` (каждая строка с ✓), затем **Actions → Release YouTube Morphe → Run workflow**.
 
 Секреты (Settings → Secrets and variables → Actions):
 
