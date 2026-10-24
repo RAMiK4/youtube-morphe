@@ -4,7 +4,7 @@
 
 1. **Source APK** — the original YouTube APK (arm64, full APK) is attached to the draft release `source`. Replace it when a new YouTube version is supported. Do not delete or publish this draft.
 2. **Actions → Release YouTube Morphe → Run workflow**
-   - `patches`: empty uses the newest Morphe release (stable or dev), or enter a tag such as `v1.48.0`
+   - `patches`: `stable` (latest stable Morphe release) or `dev` (latest dev release)
    - `publish`: unchecked builds a test APK into the run's *Artifacts* only
 
 Every published build becomes the latest release. The workflow builds the official Morphe patches with the additions in `extras/`, applies them together with the latest YaVoT release, verifies package name and signature, publishes the release and updates `updates/*.json` for the in-app update check.

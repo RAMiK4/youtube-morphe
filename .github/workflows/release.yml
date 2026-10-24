@@ -4,10 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       patches:
-        description: "Morphe patches version (default: newest release) or a tag, e.g. v1.48.0"
-        required: false
-        default: "newest"
-        type: string
+        description: "Morphe patches"
+        required: true
+        default: "stable"
+        type: choice
+        options:
+          - stable
+          - dev
       publish:
         description: "Publish the release (unchecked: test build in Artifacts only)"
         required: false
@@ -50,9 +53,8 @@ jobs:
           CHANNEL: ${{ inputs.patches }}
         run: |
           case "$CHANNEL" in
-            ""|newest) TAG=$(gh api "repos/$PATCHES_REPO/releases?per_page=30" -q '[.[] | select(.draft | not)][0].tag_name') ;;
-            latest)    TAG=$(gh api "repos/$PATCHES_REPO/releases/latest" -q .tag_name) ;;
-            dev)       TAG=$(gh api "repos/$PATCHES_REPO/releases?per_page=30" -q '[.[] | select(.prerelease)][0].tag_name') ;;
+            stable) TAG=$(gh api "repos/$PATCHES_REPO/releases/latest" -q .tag_name) ;;
+            dev)    TAG=$(gh api "repos/$PATCHES_REPO/releases?per_page=30" -q '[.[] | select(.prerelease and (.draft | not))][0].tag_name') ;;
             *)         TAG=$(gh api "repos/$PATCHES_REPO/releases/tags/$CHANNEL" -q .tag_name) ;;
           esac
           [ -n "$TAG" ] && [ "$TAG" != null ] || { echo "::error::Patches version '$CHANNEL' not found"; exit 1; }
