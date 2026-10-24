@@ -8,6 +8,11 @@ on:
         required: false
         default: "latest"
         type: string
+      youtube:
+        description: "Версия YouTube из релиза source: latest (самая новая) или напр. 21.42.243"
+        required: false
+        default: "latest"
+        type: string
       publish:
         description: "Опубликовать релиз (выкл. — только тестовая сборка в Artifacts)"
         required: false
@@ -117,17 +122,32 @@ jobs:
           mv "$RUNNER_TEMP"/cli/*.jar "$RUNNER_TEMP/morphe-cli.jar"
 
       - name: Download source APK
+        env:
+          YOUTUBE: ${{ inputs.youtube }}
         run: |
-          # Оригинальный APK лежит в черновом (скрытом) релизе с тегом "source"
+          # Оригинальные APK лежат в черновом (скрытом) релизе с тегом "source".
+          # Выбирается версия из поля youtube или самая новая.
           mapfile -t URLS < <(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
             -q '.[] | select(.tag_name=="source") | .assets[] | select(.name|endswith(".apk")) | .url')
-          [ "${#URLS[@]}" -eq 1 ] || { echo "::error::В релизе source должен быть ровно один APK (найдено: ${#URLS[@]})"; exit 1; }
-          mkdir -p "$RUNNER_TEMP/src"
-          SRC="$RUNNER_TEMP/src/youtube.apk"
-          gh api -H "Accept: application/octet-stream" "${URLS[0]}" > "$SRC"
+          [ "${#URLS[@]}" -gt 0 ] || { echo "::error::В релизе source нет APK"; exit 1; }
           AAPT=$(ls "$ANDROID_HOME"/build-tools/*/aapt | sort -V | tail -1)
-          VER=$("$AAPT" dump badging "$SRC" | sed -n "s/.*versionName='\([^']*\)'.*/\1/p" | head -1)
-          [ -n "$VER" ] || { echo "::error::Не удалось определить версию APK"; exit 1; }
+          mkdir -p "$RUNNER_TEMP/src"
+          SRC="" VER="" CODE=-1
+          for i in "${!URLS[@]}"; do
+            f="$RUNNER_TEMP/src/youtube-$i.apk"
+            gh api -H "Accept: application/octet-stream" "${URLS[$i]}" > "$f"
+            badging=$("$AAPT" dump badging "$f" | head -1)
+            v=$(sed -n "s/.*versionName='\([^']*\)'.*/\1/p" <<< "$badging")
+            c=$(sed -n "s/.*versionCode='\([^']*\)'.*/\1/p" <<< "$badging")
+            echo "Найден APK: $v ($c)"
+            if [ -n "$YOUTUBE" ] && [ "$YOUTUBE" != "latest" ]; then
+              [ "$v" = "$YOUTUBE" ] && { SRC=$f; VER=$v; }
+            elif [ "${c:-0}" -gt "$CODE" ]; then
+              SRC=$f; VER=$v; CODE=$c
+            fi
+          done
+          [ -n "$SRC" ] || { echo "::error::APK версии '$YOUTUBE' не найден в релизе source"; exit 1; }
+          echo "Выбран YouTube $VER"
           echo "AAPT=$AAPT" >> "$GITHUB_ENV"
           echo "SRC_APK=$SRC" >> "$GITHUB_ENV"
           echo "YT_VERSION=$VER" >> "$GITHUB_ENV"

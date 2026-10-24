@@ -2,7 +2,7 @@
 
 ## Release
 
-1. **Source APK** — the original YouTube APK (arm64, full APK) is attached to the draft release `source`. Replace it there when the YouTube version changes. Do not delete or publish this draft.
+1. **Source APKs** — original YouTube APKs (arm64, full APK) are attached to the draft release `source`. Several versions can be kept there; the workflow uses the newest one, or the version entered in `youtube`. Do not delete or publish this draft.
 2. **Actions → Release YouTube Morphe → Run workflow**
    - `patches`: `latest` (stable), `dev` (latest dev) or a tag such as `v1.48.0`
    - `publish`: unchecked builds a test APK into the run's *Artifacts* only
