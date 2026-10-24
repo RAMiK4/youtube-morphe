@@ -128,7 +128,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           CERT_SHA256: ${{ vars.CERT_SHA256 }}
         run: |
-          set -euo pipefail
+          set -Eeuo pipefail
           # Весь вывод в лог; при ошибке ключевые строки выводятся как аннотации (видны без входа)
           LOG="$RUNNER_TEMP/build.log"
           exec > >(tee -a "$LOG") 2>&1
