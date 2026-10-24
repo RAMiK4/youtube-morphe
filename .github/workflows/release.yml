@@ -8,9 +8,15 @@ on:
         required: false
         default: "latest"
         type: string
+      publish:
+        description: "Опубликовать релиз (выкл. — только тестовая сборка в Artifacts)"
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: write
+  packages: read
 
 concurrency:
   group: release
@@ -38,22 +44,39 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Download patches
+      - name: Resolve patches version
         env:
           CHANNEL: ${{ inputs.patches }}
         run: |
           case "$CHANNEL" in
-            ""|latest) REL=$(gh api "repos/$PATCHES_REPO/releases/latest") ;;
-            dev)       REL=$(gh api "repos/$PATCHES_REPO/releases?per_page=30" -q '[.[] | select(.prerelease)][0]') ;;
-            *)         REL=$(gh api "repos/$PATCHES_REPO/releases/tags/$CHANNEL") ;;
+            ""|latest) TAG=$(gh api "repos/$PATCHES_REPO/releases/latest" -q .tag_name) ;;
+            dev)       TAG=$(gh api "repos/$PATCHES_REPO/releases?per_page=30" -q '[.[] | select(.prerelease)][0].tag_name') ;;
+            *)         TAG=$(gh api "repos/$PATCHES_REPO/releases/tags/$CHANNEL" -q .tag_name) ;;
           esac
-          TAG=$(echo "$REL" | jq -r .tag_name)
-          URL=$(echo "$REL" | jq -r '.assets[] | select(.name|endswith(".mpp")) | .url' | head -1)
-          [ -n "$URL" ] && [ "$URL" != null ] || { echo "::error::Не найден .mpp для '$CHANNEL'"; exit 1; }
-          gh api -H "Accept: application/octet-stream" "$URL" > "$RUNNER_TEMP/patches.mpp"
+          [ -n "$TAG" ] && [ "$TAG" != null ] || { echo "::error::Не найдена версия патчей '$CHANNEL'"; exit 1; }
           echo "Патчи: $TAG"
           echo "PATCHES_TAG=$TAG" >> "$GITHUB_ENV"
           echo "PATCHES_VER=${TAG#v}" >> "$GITHUB_ENV"
+
+      - name: Checkout patches
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ env.PATCHES_REPO }}
+          ref: ${{ env.PATCHES_TAG }}
+          path: patches-src
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build patches (official + extras)
+        working-directory: patches-src
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Дополнительные патчи из extras/ добавляются к официальным
+          cp -rv "$GITHUB_WORKSPACE"/extras/. ./
+          ./gradlew :patches:buildAndroid --no-daemon
+          cp patches/build/libs/patches-*.mpp "$RUNNER_TEMP/patches.mpp"
 
       - name: Download Morphe CLI
         run: |
@@ -118,9 +141,9 @@ jobs:
           ls -d branding/mipmap-* >/dev/null 2>&1 && ICON="$GITHUB_WORKSPACE/branding"
           ls branding/drawable-*/morphe_header_custom_*.png >/dev/null 2>&1 && HEADER="$GITHUB_WORKSPACE/branding"
 
-          # $1 id, $2 метка в имени файла, $3 безопасное имя, $4 пакет, $5 clone, $6 тёмная, $7 светлая
+          # $1 id, $2 метка в имени файла, $3 безопасное имя, $4 пакет, $5 clone, $6 цвета по умолчанию (JSON)
           build_variant() {
-            local id=$1 label=$2 safe=$3 pkg=$4 clone=$5 dark=$6 light=$7
+            local id=$1 label=$2 safe=$3 pkg=$4 clone=$5 theme=$6
             local opts="$RUNNER_TEMP/options-$id.json"
             local base="YouTube_Morphe-v${YT_VERSION}-p${PATCHES_VER}"
             # GitHub заменяет [ ] ( ) + в именах файлов, поэтому имя файла безопасное,
@@ -132,7 +155,7 @@ jobs:
             echo "::group::Вариант $id ($pkg)"
             jq --slurpfile yt "$RUNNER_TEMP/yt-patches.json" \
                --argjson clone "$clone" --arg pkg "$pkg" \
-               --arg dark "$dark" --arg light "$light" \
+               --argjson theme "$theme" \
                --arg name "$APP_NAME" --arg icon "$icon" --arg header "$header" '
               def opt($p; $k; $v): if .[0].patches[$p] then .[0].patches[$p].options[$k] = $v
                                    else error("Нет патча: " + $p) end;
@@ -142,8 +165,9 @@ jobs:
               )
               | .[0].patches["Clone app"].enabled = $clone
               | if $clone then opt("Clone app"; "packageName"; $pkg) else . end
-              | opt("Theme"; "darkThemeColor"; $dark)
-              | opt("Theme"; "lightThemeColor"; $light)
+              | opt("Theme"; "darkThemeColor"; "in-app")
+              | opt("Theme"; "lightThemeColor"; "in-app")
+              | reduce ($theme | to_entries[]) as $e (.; opt("Theme defaults"; $e.key; $e.value))
               | opt("Custom branding"; "customName"; $name)
               | if $icon != "" then opt("Custom branding"; "customIcon"; $icon) else . end
               | if $header != "" then opt("Change header"; "custom"; $header) else . end
@@ -181,7 +205,7 @@ jobs:
               echo "::warning::CERT_SHA256 не задан — проверка подписи пропущена"
             fi
 
-            # update-<id>.json для проверки обновлений внутри приложения
+            # updates/<id>.json для проверки обновлений внутри приложения (хранится в репозитории)
             local name changelog
             name=$(basename "$out")
             changelog=$(cat CHANGELOG.md 2>/dev/null || true)
@@ -196,18 +220,31 @@ jobs:
               '{build:$build, variant:$variant, package:$pkg, yt_version:$yt, patches:$patches,
                 tag:$tag, apk_url:$apk, release_url:$page, forum_url:$forum,
                 changelog:$changelog, sha256:$sha, size:$size}' \
-              > "$RUNNER_TEMP/out/update-$id.json"
+              > "$RUNNER_TEMP/update-$id.json"
             echo "::endgroup::"
           }
 
-          build_variant hiby   "[Original+BBK]_Mod_(Clone)" "Original_BBK_Mod_Clone" \
-                        com.hiby.music              true  "#0F0F0F" "#F0F0F0"
-          build_variant morphe "[Amoled+]_Mod"              "Amoled_Mod" \
-                        app.morphe.android.youtube  false "in-app"  "in-app"
+          # Original: тёмная #0F0F0F (как в YouTube), светлая #F0F0F0, текст цветом другой темы
+          build_variant hiby   "[Original+]_Mod_(BBK Clone)" "Original_Mod_BBK_Clone" \
+            com.hiby.music true \
+            '{"darkDefault":"APP_DEFAULT","lightDefault":"CUSTOM","lightCustomDefault":"#F0F0F0","changeForegroundDefault":true}'
+          # Amoled: чёрная #000000 / белая #FFFFFF (значения Morphe по умолчанию)
+          build_variant morphe "[Amoled+]_Mod"               "Amoled_Mod" \
+            app.morphe.android.youtube false \
+            '{}'
+
+      - name: Upload test build
+        if: ${{ !inputs.publish }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-build
+          path: ${{ runner.temp }}/out/*.apk
+          retention-days: 3
 
       - name: Publish release
+        if: ${{ inputs.publish }}
         run: |
-          HIBY=$(cat "$RUNNER_TEMP"/out/*Clone.apk.label)
+          HIBY=$(cat "$RUNNER_TEMP"/out/*BBK_Clone.apk.label)
           MORPHE=$(cat "$RUNNER_TEMP"/out/*Amoled_Mod.apk.label)
           {
             cat CHANGELOG.md 2>/dev/null || true
@@ -221,8 +258,20 @@ jobs:
           } > "$RUNNER_TEMP/notes.md"
           FILES=()
           for f in "$RUNNER_TEMP"/out/*.apk; do FILES+=("$f#$(cat "$f.label")"); done
-          FILES+=("$RUNNER_TEMP"/out/update-*.json)
           gh release create "$TAG" "${FILES[@]}" \
             --title "$APP_TITLE $YT_VERSION · $PATCHES_TAG" \
             --notes-file "$RUNNER_TEMP/notes.md" \
             --latest
+
+      - name: Publish update info
+        if: ${{ inputs.publish }}
+        run: |
+          mkdir -p updates
+          cp "$RUNNER_TEMP/update-hiby.json" updates/hiby.json
+          cp "$RUNNER_TEMP/update-morphe.json" updates/morphe.json
+          git config user.name "RAMiK4"
+          git config user.email "60112744+RAMiK4@users.noreply.github.com"
+          git add updates
+          git commit -m "Update info for $TAG"
+          git pull --rebase -q
+          git push

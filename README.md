@@ -6,7 +6,7 @@
 
 | Файл | Пакет |
 |---|---|
-| `YouTube_Morphe-v<версия>-p<патчи>_[Original+BBK]_Mod_(Clone).apk` | `com.hiby.music` |
+| `YouTube_Morphe-v<версия>-p<патчи>_[Original+]_Mod_(BBK Clone).apk` | `com.hiby.music` |
 | `YouTube_Morphe-v<версия>-p<патчи>_[Amoled+]_Mod.apk` | `app.morphe.android.youtube` |
 
 Сборки подписаны тем же ключом, что и версии с 4PDA, поэтому обновление устанавливается поверх без удаления.
@@ -28,6 +28,13 @@
 | `KEY_PASSWORD` | secret | пароль ключа (пусто — `Morphe`) |
 | `CERT_SHA256` | variable | отпечаток SHA-256 сертификата для проверки подписи |
 
-Собираются два варианта: `(Clone)` (пакет `com.hiby.music`, тема #0F0F0F / #F0F0F0) и стандартный (`app.morphe.android.youtube`, тема меняется в приложении). Включены все патчи YouTube + «Change installer source».
+Собираются два варианта, в обоих цвета темы меняются в настройках приложения:
+
+- `[Original+]` (`com.hiby.music`) — по умолчанию тёмная #0F0F0F, светлая #F0F0F0, текст цветом другой темы;
+- `[Amoled+]` (`app.morphe.android.youtube`) — по умолчанию тёмная #000000, светлая #FFFFFF.
+
+Включены все патчи YouTube + «Change installer source». Патчи собираются из официальной версии Morphe с дополнениями из `extras/`.
+
+Информация для проверки обновлений: `updates/hiby.json`, `updates/morphe.json`.
 
 `branding/` — своя иконка (`mipmap-*`), логотип в шапке и значок уведомлений (`drawable-*`).
