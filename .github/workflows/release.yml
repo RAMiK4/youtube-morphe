@@ -4,17 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       patches:
-        description: "Патчи Morphe: latest (стабильная), dev (последняя dev) или тег, напр. v1.48.0"
+        description: "Morphe patches version (default: newest release) or a tag, e.g. v1.48.0"
         required: false
-        default: "latest"
-        type: string
-      youtube:
-        description: "Версия YouTube из релиза source: latest (самая новая) или напр. 21.42.243"
-        required: false
-        default: "latest"
+        default: "newest"
         type: string
       publish:
-        description: "Опубликовать релиз (выкл. — только тестовая сборка в Artifacts)"
+        description: "Publish the release (unchecked: test build in Artifacts only)"
         required: false
         default: true
         type: boolean
@@ -33,7 +28,7 @@ env:
   APP_TITLE: YouTube Morphe
   APP_NAME: YouTube
   STRIPLIBS: arm64-v8a
-  FORUM_URL: ""   # ссылка на тему 4PDA
+  FORUM_URL: ""   # 4PDA topic URL
 
 jobs:
   release:
@@ -55,12 +50,13 @@ jobs:
           CHANNEL: ${{ inputs.patches }}
         run: |
           case "$CHANNEL" in
-            ""|latest) TAG=$(gh api "repos/$PATCHES_REPO/releases/latest" -q .tag_name) ;;
+            ""|newest) TAG=$(gh api "repos/$PATCHES_REPO/releases?per_page=30" -q '[.[] | select(.draft | not)][0].tag_name') ;;
+            latest)    TAG=$(gh api "repos/$PATCHES_REPO/releases/latest" -q .tag_name) ;;
             dev)       TAG=$(gh api "repos/$PATCHES_REPO/releases?per_page=30" -q '[.[] | select(.prerelease)][0].tag_name') ;;
             *)         TAG=$(gh api "repos/$PATCHES_REPO/releases/tags/$CHANNEL" -q .tag_name) ;;
           esac
-          [ -n "$TAG" ] && [ "$TAG" != null ] || { echo "::error::Не найдена версия патчей '$CHANNEL'"; exit 1; }
-          echo "Патчи: $TAG"
+          [ -n "$TAG" ] && [ "$TAG" != null ] || { echo "::error::Patches version '$CHANNEL' not found"; exit 1; }
+          echo "Patches: $TAG"
           echo "PATCHES_TAG=$TAG" >> "$GITHUB_ENV"
           echo "PATCHES_VER=${TAG#v}" >> "$GITHUB_ENV"
 
@@ -73,8 +69,8 @@ jobs:
 
       - name: Generate changelog
         run: |
-          # YouTube-часть списка изменений Morphe: стабильная версия — свой раздел,
-          # dev — все dev-разделы после предыдущей стабильной (новые сверху)
+          # YouTube part of the Morphe changelog: a stable version lists its own section,
+          # a dev version every dev section since the previous stable one (newest first)
           python3 -I scripts/changelog.py patches-src/CHANGELOG.md "$PATCHES_VER" \
             "$RUNNER_TEMP/changes.md" "$RUNNER_TEMP/changes.txt"
           cat "$RUNNER_TEMP/changes.txt"
@@ -87,14 +83,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Дополнительные патчи и код из extras/ добавляются к официальным
+          # Additional patches and code from extras/ are added to the official ones
           cp -rv "$GITHUB_WORKSPACE"/extras/patches/. patches/
           cp -rv "$GITHUB_WORKSPACE"/extras/extensions/. extensions/
-          # Строки extras/strings/<locale>/strings.xml дописываются в строки YouTube
+          # Strings from extras/strings/<locale>/strings.xml are appended to the YouTube strings
           for src in "$GITHUB_WORKSPACE"/extras/strings/*/strings.xml; do
             loc=$(basename "$(dirname "$src")")
             dst="patches/src/main/resources/addresources/$loc/youtube/strings.xml"
-            [ -f "$dst" ] || { echo "::error::Нет файла строк $dst"; exit 1; }
+            [ -f "$dst" ] || { echo "::error::Strings file $dst not found"; exit 1; }
             python3 - "$src" "$dst" <<'PY'
           import sys
           src, dst = sys.argv[1], sys.argv[2]
@@ -103,7 +99,7 @@ jobs:
           i = text.rindex("</resources>")
           open(dst, "w", encoding="utf-8").write(text[:i] + extra + text[i:])
           PY
-            echo "Строки добавлены: $loc"
+            echo "Strings added: $loc"
           done
           ./gradlew :patches:buildAndroid --no-daemon
           cp patches/build/libs/patches-*.mpp "$RUNNER_TEMP/patches.mpp"
@@ -122,14 +118,12 @@ jobs:
           mv "$RUNNER_TEMP"/cli/*.jar "$RUNNER_TEMP/morphe-cli.jar"
 
       - name: Download source APK
-        env:
-          YOUTUBE: ${{ inputs.youtube }}
         run: |
-          # Оригинальные APK лежат в черновом (скрытом) релизе с тегом "source".
-          # Выбирается версия из поля youtube или самая новая.
+          # The original APK is attached to the hidden draft release "source".
+          # If there are several, the newest version is used.
           mapfile -t URLS < <(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
             -q '.[] | select(.tag_name=="source") | .assets[] | select(.name|endswith(".apk")) | .url')
-          [ "${#URLS[@]}" -gt 0 ] || { echo "::error::В релизе source нет APK"; exit 1; }
+          [ "${#URLS[@]}" -gt 0 ] || { echo "::error::No APK in the source release"; exit 1; }
           AAPT=$(ls "$ANDROID_HOME"/build-tools/*/aapt | sort -V | tail -1)
           mkdir -p "$RUNNER_TEMP/src"
           SRC="" VER="" CODE=-1
@@ -139,15 +133,13 @@ jobs:
             badging=$("$AAPT" dump badging "$f" | head -1)
             v=$(sed -n "s/.*versionName='\([^']*\)'.*/\1/p" <<< "$badging")
             c=$(sed -n "s/.*versionCode='\([^']*\)'.*/\1/p" <<< "$badging")
-            echo "Найден APK: $v ($c)"
-            if [ -n "$YOUTUBE" ] && [ "$YOUTUBE" != "latest" ]; then
-              [ "$v" = "$YOUTUBE" ] && { SRC=$f; VER=$v; }
-            elif [ "${c:-0}" -gt "$CODE" ]; then
+            echo "Found APK: $v ($c)"
+            if [ "${c:-0}" -gt "$CODE" ]; then
               SRC=$f; VER=$v; CODE=$c
             fi
           done
-          [ -n "$SRC" ] || { echo "::error::APK версии '$YOUTUBE' не найден в релизе source"; exit 1; }
-          echo "Выбран YouTube $VER"
+          [ -n "$SRC" ] || { echo "::error::Could not read the source APK"; exit 1; }
+          echo "YouTube $VER"
           echo "AAPT=$AAPT" >> "$GITHUB_ENV"
           echo "SRC_APK=$SRC" >> "$GITHUB_ENV"
           echo "YT_VERSION=$VER" >> "$GITHUB_ENV"
@@ -157,20 +149,20 @@ jobs:
           CLI="$RUNNER_TEMP/morphe-cli.jar"
           java -jar "$CLI" options-create -p "$RUNNER_TEMP/patches.mpp" -p "$RUNNER_TEMP/yavot.mpp" \
             -o "$RUNNER_TEMP/base.json" -f com.google.android.youtube
-          [ "$(jq length "$RUNNER_TEMP/base.json")" -eq 2 ] || { echo "::error::Ожидалось 2 набора патчей в options"; exit 1; }
-          # Все патчи YouTube (без универсальных)
+          [ "$(jq length "$RUNNER_TEMP/base.json")" -eq 2 ] || { echo "::error::Expected 2 patch bundles in the options file"; exit 1; }
+          # All YouTube patches (without universal patches)
           java -jar "$CLI" list-patches --patches "$RUNNER_TEMP/patches.mpp" \
             --filter-package-name com.google.android.youtube \
             --with-universal-patches=false --with-descriptions=false \
             | sed -n 's/^Name: //p' | jq -R . | jq -s . > "$RUNNER_TEMP/yt-patches.json"
-          echo "Патчей YouTube: $(jq length "$RUNNER_TEMP/yt-patches.json")"
+          echo "YouTube patches: $(jq length "$RUNNER_TEMP/yt-patches.json")"
 
       - name: Restore keystore
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
         run: |
           if [ -z "$KEYSTORE_B64" ]; then
-            echo "::error::Секрет KEYSTORE_B64 не задан — без своего ключа обновление поверх старой версии невозможно"
+            echo "::error::Secret KEYSTORE_B64 is not set. Without the signing key, updates cannot be installed over older builds"
             exit 1
           fi
           echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/morphe.keystore"
@@ -183,12 +175,12 @@ jobs:
           CERT_SHA256: ${{ vars.CERT_SHA256 }}
         run: |
           set -Eeuo pipefail
-          # Весь вывод в лог; при ошибке ключевые строки выводятся как аннотации (видны без входа)
+          # All output goes to a log; on failure the key lines become annotations (visible without signing in)
           LOG="$RUNNER_TEMP/build.log"
           exec > >(tee -a "$LOG") 2>&1
           report() {
             sleep 1
-            grep -E "SEVERE|Exception|error|Error|failed|Failed|Нет патча|не найден" "$LOG" \
+            grep -E "SEVERE|Exception|error|Error|failed|Failed|not found" "$LOG" \
               | grep -v "^::" | tail -n 9 | cut -c1-900 \
               | sed -e 's/%/%25/g' -e 's/\r/%0D/g' \
               | while IFS= read -r line; do echo "::error::$line"; done
@@ -201,23 +193,23 @@ jobs:
           echo "BUILD=$BUILD" >> "$GITHUB_ENV"
           echo "TAG=$TAG" >> "$GITHUB_ENV"
 
-          # Одна папка branding/: mipmap-* (иконка), drawable-* (логотип в шапке + значок уведомлений)
+          # One branding/ folder: mipmap-* (icon), drawable-* (header logo + notification icon)
           ICON=""; HEADER=""
           ls -d branding/mipmap-* >/dev/null 2>&1 && ICON="$GITHUB_WORKSPACE/branding"
           ls branding/drawable-*/morphe_header_custom_*.png >/dev/null 2>&1 && HEADER="$GITHUB_WORKSPACE/branding"
 
-          # $1 id, $2 метка в имени файла, $3 безопасное имя, $4 пакет, $5 clone, $6 цвета по умолчанию (JSON)
+          # $1 id, $2 file name label, $3 safe file name, $4 package, $5 clone, $6 theme defaults (JSON)
           build_variant() {
             local id=$1 label=$2 safe=$3 pkg=$4 clone=$5 theme=$6
             local opts="$RUNNER_TEMP/options-$id.json"
             local base="YouTube_Morphe-v${YT_VERSION}-p${PATCHES_VER}"
-            # GitHub заменяет [ ] ( ) + в именах файлов, поэтому имя файла безопасное,
-            # а точное имя в формате 4PDA показывается как подпись (label)
+            # GitHub replaces [ ] ( ) + in asset names, so the file name is safe
+            # and the exact 4PDA-style name is shown as the asset label
             local out="$RUNNER_TEMP/out/${base}_${safe}.apk"
             echo "${base}_${label}.apk" > "$out.label"
             local icon="$ICON" header="$HEADER"
 
-            echo "::group::Вариант $id ($pkg)"
+            echo "::group::Variant $id ($pkg)"
             jq --slurpfile yt "$RUNNER_TEMP/yt-patches.json" \
                --argjson clone "$clone" --arg pkg "$pkg" \
                --argjson theme "$theme" \
@@ -227,7 +219,7 @@ jobs:
                --arg defaults "$(jq -c . settings/defaults.json)" \
                --arg name "$APP_NAME" --arg icon "$icon" --arg header "$header" '
               def opt($p; $k; $v): if .[0].patches[$p] then .[0].patches[$p].options[$k] = $v
-                                   else error("Нет патча: " + $p) end;
+                                   else error("Patch not found: " + $p) end;
               .[0].patches |= with_entries(
                 .value.enabled = ((.key as $k | $yt[0] | index($k)) != null
                                   or .key == "Change installer source")
@@ -241,7 +233,7 @@ jobs:
               | opt("Update checker"; "buildNumber"; $build)
               | opt("Update checker"; "versionInfo"; $verinfo)
               | opt("Default settings"; "settings"; $defaults)
-              # Дополнения (YaVoT): все патчи включены
+              # Add-ons (YaVoT): all patches enabled
               | .[range(1; length)].patches |= with_entries(.value.enabled = true)
               | opt("Custom branding"; "customName"; $name)
               | if $icon != "" then opt("Custom branding"; "customIcon"; $icon) else . end
@@ -263,36 +255,36 @@ jobs:
               -o "$out" \
               "$SRC_APK"
 
-            # Проверка пакета: непропатченный или неверный APK не публикуется
+            # Package check: an unpatched or wrong APK is never published
             local actual_pkg
             actual_pkg=$("$AAPT" dump badging "$out" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")
-            echo "Пакет: $actual_pkg"
-            [ "$actual_pkg" = "$pkg" ] || { echo "::error::$id: пакет $actual_pkg вместо $pkg. Релиз не опубликован."; exit 1; }
+            echo "Package: $actual_pkg"
+            [ "$actual_pkg" = "$pkg" ] || { echo "::error::$id: package $actual_pkg instead of $pkg. Release not published."; exit 1; }
 
-            # Проверка подписи
+            # Signature check
             local cert
             cert=$("$APKSIGNER" verify --print-certs "$out" | sed -n 's/.*certificate SHA-256 digest: //p' | head -1 | tr 'A-F' 'a-f')
-            echo "Подпись: $cert"
+            echo "Signature: $cert"
             if [ -n "$CERT_SHA256" ]; then
               local expected
               expected=$(echo "$CERT_SHA256" | tr -d ': ' | tr 'A-F' 'a-f')
-              [ "$cert" = "$expected" ] || { echo "::error::$id: подпись не совпадает. Релиз не опубликован."; exit 1; }
+              [ "$cert" = "$expected" ] || { echo "::error::$id: signature does not match. Release not published."; exit 1; }
             else
-              echo "::warning::CERT_SHA256 не задан — проверка подписи пропущена"
+              echo "::warning::CERT_SHA256 is not set, signature check skipped"
             fi
 
-            # updates/<id>.json для проверки обновлений внутри приложения (хранится в репозитории)
+            # updates/<id>.json for the in-app update check (kept in the repository)
             local name changelog
             name=$(basename "$out")
-            # Английский — из Morphe; другие языки — changelog/<язык>.md,
-            # только если первая строка <!-- версия --> совпадает с версией патчей
+            # English from Morphe; other languages from changelog/<language>.md,
+            # only if its first line <!-- version --> matches the patches version
             changelog=$(cat "$RUNNER_TEMP/changes.txt")
             local changelogs
             changelogs=$(jq -n --rawfile text "$RUNNER_TEMP/changes.txt" '{en: ($text | rtrimstr("\n"))}')
             for f in changelog/*.md; do
               [ -f "$f" ] || continue
               if [ "$(head -n1 "$f" | tr -d '[:space:]')" != "<!--${PATCHES_VER}-->" ]; then
-                echo "::warning::$f не для версии $PATCHES_VER — пропущен"
+                echo "::warning::$f is not for version $PATCHES_VER, skipped"
                 continue
               fi
               changelogs=$(jq --arg lang "$(basename "$f" .md)" --arg text "$(tail -n +2 "$f")" \
@@ -314,11 +306,11 @@ jobs:
             echo "::endgroup::"
           }
 
-          # Original: тёмная #0F0F0F (как в YouTube), светлая #F0F0F0, текст цветом другой темы
+          # Original: dark #0F0F0F (YouTube default), light #F0F0F0, text in the color of the other theme
           build_variant hiby   "[Original+]_Mod_(BBK Clone)" "Original_Mod_BBK_Clone" \
             com.hiby.music true \
             '{"darkDefault":"APP_DEFAULT","lightDefault":"CUSTOM","lightCustomDefault":"#F0F0F0","changeForegroundDefault":true}'
-          # Amoled: чёрная #000000 / белая #FFFFFF (значения Morphe по умолчанию)
+          # Amoled: black #000000 / white #FFFFFF (Morphe defaults)
           build_variant morphe "[Amoled+]_Mod"               "Amoled_Mod" \
             app.morphe.android.youtube false \
             '{}'

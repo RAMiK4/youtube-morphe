@@ -2,12 +2,12 @@
 
 ## Release
 
-1. **Source APKs** — original YouTube APKs (arm64, full APK) are attached to the draft release `source`. Several versions can be kept there; the workflow uses the newest one, or the version entered in `youtube`. Do not delete or publish this draft.
+1. **Source APK** — the original YouTube APK (arm64, full APK) is attached to the draft release `source`. Replace it when a new YouTube version is supported. Do not delete or publish this draft.
 2. **Actions → Release YouTube Morphe → Run workflow**
-   - `patches`: `latest` (stable), `dev` (latest dev) or a tag such as `v1.48.0`
+   - `patches`: empty uses the newest Morphe release (stable or dev), or enter a tag such as `v1.48.0`
    - `publish`: unchecked builds a test APK into the run's *Artifacts* only
 
-The workflow builds the official Morphe patches with the additions in `extras/`, applies them together with the latest YaVoT release, verifies package name and signature, publishes the release and updates `updates/*.json` for the in-app update check.
+Every published build becomes the latest release. The workflow builds the official Morphe patches with the additions in `extras/`, applies them together with the latest YaVoT release, verifies package name and signature, publishes the release and updates `updates/*.json` for the in-app update check.
 
 The changelog is generated from the Morphe changelog (YouTube only): a stable version lists its own section, a dev version lists every dev section since the previous stable one, newest first. Optional translations for the in-app dialog: `changelog/<language>.md` whose first line is `<!-- <patches version> -->`.
 
