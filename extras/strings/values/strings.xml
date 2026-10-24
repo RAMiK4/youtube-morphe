@@ -1,0 +1,12 @@
+    <!-- extras: Update checker -->
+    <string name="morphe_update_category_title">Updates</string>
+    <string name="morphe_update_check_title">Check for updates</string>
+    <string name="morphe_update_check_summary">Check for a new build on startup</string>
+    <string name="morphe_update_check_now_title">Check now</string>
+    <string name="morphe_update_check_now_summary">Check for a new build</string>
+    <string name="morphe_update_dialog_title">Update available</string>
+    <string name="morphe_update_dialog_version">YouTube %1$s · Morphe %2$s</string>
+    <string name="morphe_update_dialog_download">Download</string>
+    <string name="morphe_update_dialog_skip">Skip this version</string>
+    <string name="morphe_update_latest">You have the latest version</string>
+    <string name="morphe_update_failed">Could not check for updates</string>

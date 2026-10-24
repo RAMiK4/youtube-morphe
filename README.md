@@ -35,6 +35,6 @@
 
 Включены все патчи YouTube + «Change installer source». Патчи собираются из официальной версии Morphe с дополнениями из `extras/`.
 
-Информация для проверки обновлений: `updates/hiby.json`, `updates/morphe.json`.
+Проверка обновлений внутри приложения (Настройки Morphe → Прочее → Обновления) читает `updates/hiby.json` и `updates/morphe.json`.
 
 `branding/` — своя иконка (`mipmap-*`), логотип в шапке и значок уведомлений (`drawable-*`).

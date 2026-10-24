@@ -73,8 +73,24 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Дополнительные патчи из extras/ добавляются к официальным
-          cp -rv "$GITHUB_WORKSPACE"/extras/. ./
+          # Дополнительные патчи и код из extras/ добавляются к официальным
+          cp -rv "$GITHUB_WORKSPACE"/extras/patches/. patches/
+          cp -rv "$GITHUB_WORKSPACE"/extras/extensions/. extensions/
+          # Строки extras/strings/<locale>/strings.xml дописываются в строки YouTube
+          for src in "$GITHUB_WORKSPACE"/extras/strings/*/strings.xml; do
+            loc=$(basename "$(dirname "$src")")
+            dst="patches/src/main/resources/addresources/$loc/youtube/strings.xml"
+            [ -f "$dst" ] || { echo "::error::Нет файла строк $dst"; exit 1; }
+            python3 - "$src" "$dst" <<'PY'
+          import sys
+          src, dst = sys.argv[1], sys.argv[2]
+          extra = open(src, encoding="utf-8").read()
+          text = open(dst, encoding="utf-8").read()
+          i = text.rindex("</resources>")
+          open(dst, "w", encoding="utf-8").write(text[:i] + extra + text[i:])
+          PY
+            echo "Строки добавлены: $loc"
+          done
           ./gradlew :patches:buildAndroid --no-daemon
           cp patches/build/libs/patches-*.mpp "$RUNNER_TEMP/patches.mpp"
 
@@ -167,6 +183,9 @@ jobs:
             jq --slurpfile yt "$RUNNER_TEMP/yt-patches.json" \
                --argjson clone "$clone" --arg pkg "$pkg" \
                --argjson theme "$theme" \
+               --arg updurl "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/main/updates/$id.json" \
+               --arg build "$BUILD" \
+               --arg verinfo "Build $BUILD · YouTube $YT_VERSION · Morphe $PATCHES_VER" \
                --arg name "$APP_NAME" --arg icon "$icon" --arg header "$header" '
               def opt($p; $k; $v): if .[0].patches[$p] then .[0].patches[$p].options[$k] = $v
                                    else error("Нет патча: " + $p) end;
@@ -179,6 +198,9 @@ jobs:
               | opt("Theme"; "darkThemeColor"; "in-app")
               | opt("Theme"; "lightThemeColor"; "in-app")
               | reduce ($theme | to_entries[]) as $e (.; opt("Theme defaults"; $e.key; $e.value))
+              | opt("Update checker"; "updateUrl"; $updurl)
+              | opt("Update checker"; "buildNumber"; $build)
+              | opt("Update checker"; "versionInfo"; $verinfo)
               | opt("Custom branding"; "customName"; $name)
               | if $icon != "" then opt("Custom branding"; "customIcon"; $icon) else . end
               | if $header != "" then opt("Change header"; "custom"; $header) else . end
