@@ -22,6 +22,12 @@ def clean(text):
     return text.strip()
 
 
+def strip_app(item):
+    """'**YouTube - Scope:** text' -> '**Scope:** text', '**YouTube:** text' -> 'text'."""
+    item = re.sub(r"^\*\*YouTube:\*\*\s*", "", item)
+    return re.sub(r"^\*\*YouTube - ", "**", item)
+
+
 def relevant(item):
     m = re.match(r"\*\*([^*]+):\*\*", item)
     if not m:
@@ -39,15 +45,18 @@ def parse(path):
             current = {"version": m.group(1), "groups": []}
             sections.append(current)
         elif current is not None and line.startswith("### "):
-            current["groups"].append({"title": line[4:].strip(), "items": []})
+            title = line[4:].strip()
+            skipped = any(word in title.lower() for word in SKIPPED_GROUPS)
+            current["groups"].append({"title": title, "items": [], "skipped": skipped})
         elif current is not None and line.startswith("* ") and current["groups"]:
             item = clean(line[2:])
-            if relevant(item):
-                current["groups"][-1]["items"].append(item)
+            if relevant(item) and not current["groups"][-1]["skipped"]:
+                current["groups"][-1]["items"].append(strip_app(item))
     return sections
 
 
-GROUP_ORDER = ("feature", "fix", "app support")
+GROUP_ORDER = ("feature", "fix")
+SKIPPED_GROUPS = ("app support",)
 
 
 def group_rank(title):
