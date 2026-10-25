@@ -3,7 +3,7 @@
 Builds the YouTube part of the Morphe patches changelog for a patches version.
 
 Stable version: its own section (it already lists everything since the previous stable).
-Dev version: every dev section since the previous stable version, newest first.
+Dev version: the last three dev sections (itself included) since the previous stable version, newest first.
 
 Usage: changelog.py CHANGELOG.md VERSION OUT_MARKDOWN OUT_TEXT
 """
@@ -56,6 +56,7 @@ def parse(path):
 
 
 GROUP_ORDER = ("feature", "fix")
+DEV_SECTIONS = 3  # Dev changelogs: the version itself and the two before it.
 SKIPPED_GROUPS = ("app support",)
 
 
@@ -81,7 +82,7 @@ def select(sections, version):
 def main():
     path, version, out_md, out_txt = sys.argv[1:5]
     selected = [s for s in select(parse(path), version.lstrip("v"))
-                if any(g["items"] for g in s["groups"])]
+                if any(g["items"] for g in s["groups"])][:DEV_SECTIONS]
     many = len(selected) > 1
 
     md, txt = [], []
