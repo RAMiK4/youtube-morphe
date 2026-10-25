@@ -31,16 +31,24 @@ public final class UpdateCheckerPatch {
     public static final BooleanSetting UPDATE_CHECK =
             new BooleanSetting("morphe_update_check", TRUE);
 
-    private static final LongSetting LAST_CHECK =
-            new LongSetting("morphe_update_last_check", 0L, false, false);
+    /** When the update dialog was last shown automatically, and for which build. */
+    private static final LongSetting LAST_PROMPT =
+            new LongSetting("morphe_update_last_prompt", 0L, false, false);
+
+    private static final LongSetting PROMPTED_BUILD =
+            new LongSetting("morphe_update_prompted_build", 0L, false, false);
 
     private static final LongSetting SKIPPED_BUILD =
             new LongSetting("morphe_update_skipped_build", 0L, false, false);
 
-    private static final long CHECK_INTERVAL_MS = 3 * 60 * 60 * 1000L;
+    /** The same build is offered again automatically only after this much time. */
+    private static final long REMIND_INTERVAL_MS = 12 * 60 * 60 * 1000L;
     private static final int TIMEOUT_MS = 10_000;
 
     private static volatile boolean checking;
+
+    /** Automatic check once per app launch (the activity may be recreated). */
+    private static boolean checkedThisLaunch;
 
     private UpdateCheckerPatch() {
     }
@@ -82,7 +90,8 @@ public final class UpdateCheckerPatch {
     public static void onActivityCreated(Activity activity) {
         try {
             if (!UPDATE_CHECK.get()) return;
-            if (System.currentTimeMillis() - LAST_CHECK.get() < CHECK_INTERVAL_MS) return;
+            if (checkedThisLaunch) return;
+            checkedThisLaunch = true;
             check(activity, false);
         } catch (Exception ex) {
             Logger.printException(() -> "onActivityCreated failure", ex);
@@ -109,18 +118,24 @@ public final class UpdateCheckerPatch {
         Utils.runOnBackgroundThread(() -> {
             try {
                 JSONObject json = fetch(url);
-                LAST_CHECK.save(System.currentTimeMillis());
-
                 final long latest = json.getLong("build");
                 final long current = currentBuildNumber();
+                final long now = System.currentTimeMillis();
                 final boolean skipped = !manual && latest == SKIPPED_BUILD.get();
+                // Already offered recently: wait before reminding about the same build.
+                final boolean remindLater = !manual && latest == PROMPTED_BUILD.get()
+                        && now - LAST_PROMPT.get() < REMIND_INTERVAL_MS;
 
-                if (latest <= current || skipped) {
+                if (latest <= current || skipped || remindLater) {
                     if (manual) Utils.runOnMainThread(() ->
                             Utils.showToastShort(str("morphe_update_latest")));
                     return;
                 }
 
+                if (!manual) {
+                    PROMPTED_BUILD.save(latest);
+                    LAST_PROMPT.save(now);
+                }
                 Utils.runOnMainThread(() -> showUpdateDialog(activity, json, latest));
             } catch (Exception ex) {
                 Logger.printInfo(() -> "Update check failed", ex);
