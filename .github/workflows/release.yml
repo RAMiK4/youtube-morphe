@@ -11,6 +11,11 @@ on:
         options:
           - stable
           - dev
+      patches_source:
+        description: "Test only: patches from a branch, as owner/repo@branch (empty: Morphe patches above)"
+        required: false
+        default: ""
+        type: string
       publish:
         description: "Publish the release (unchecked: test build in Artifacts only)"
         required: false
@@ -51,7 +56,17 @@ jobs:
       - name: Resolve patches version
         env:
           CHANNEL: ${{ inputs.patches }}
+          SOURCE: ${{ inputs.patches_source }}
+          PUBLISH: ${{ inputs.publish }}
         run: |
+          if [ -n "$SOURCE" ]; then
+            # A branch of a fork is only built for testing, never published
+            [ "$PUBLISH" != "true" ] || { echo "::error::A patches branch is for test builds only. Uncheck 'Publish the release'."; exit 1; }
+            echo "PATCHES_REPO=${SOURCE%@*}" >> "$GITHUB_ENV"
+            echo "PATCHES_TAG=${SOURCE#*@}" >> "$GITHUB_ENV"
+            echo "Patches: $SOURCE"
+            exit 0
+          fi
           case "$CHANNEL" in
             stable) TAG=$(gh api "repos/$PATCHES_REPO/releases/latest" -q .tag_name) ;;
             dev)    TAG=$(gh api "repos/$PATCHES_REPO/releases?per_page=30" -q '[.[] | select(.prerelease and (.draft | not))][0].tag_name') ;;
@@ -68,6 +83,13 @@ jobs:
           repository: ${{ env.PATCHES_REPO }}
           ref: ${{ env.PATCHES_TAG }}
           path: patches-src
+
+      - name: Read patches version
+        if: ${{ inputs.patches_source != '' }}
+        run: |
+          VER=$(sed -n 's/^version *= *//p' patches-src/gradle.properties)
+          echo "Patches version: $VER"
+          echo "PATCHES_VER=$VER" >> "$GITHUB_ENV"
 
       - name: Generate changelog
         run: |
