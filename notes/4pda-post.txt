@@ -1,0 +1,112 @@
+[img]https://4pda.to/static/c/img/att-3529/35292760.png[/img]  [size=2][b][color="#ff0044"]YouTube Morphe[/color][/b][/size] v21.43.523 Mod ✓
+
+[b]Тип:[/b] Модификация
+[b]Версия:[/b] 21.43.523
+[b]Краткое описание:[/b] YouTube Morphe patch v1.49.0-dev.8+VoT (Google & Yandex VoT), Amoled & Original + BBK Clone 
+
+[spoiler=☑ Информация о моде »]
+
+[b]• Android:[/b] 10+ (10–17)
+[b]• Архитектура:[/b] arm64-v8a
+[b]• Языки:[/b] Все / Full Languages
+[b]• Название:[/b] YouTube [size=1](по умолчанию)[/size], YouTube Morphe, YT Morphe, YT
+[b]• Иконка:[/b] mpYT [size=1](по умолчанию)[/size], Original, Morphe (black, dark, light), Morphe Play (black, light)
+[b]• Логотип заготовка:[/b] Original [size=1](по умолчанию)[/size], YouTube, Premium, Morphe, mpYT YouTube [size=1](пользовательский)[/size]
+[b]• Тема (версии):[/b] Original Black + Soft Light, Amoled Black + Material You + Разные
+[b]• Voice over Translate:[/b] Google, Yandex VoT
+[b]• Dynamic Island:[/b] Для BBK (cn): vivo, iqoo, oppo, oneplus
+
+[size=1]ⓘ Название приложения, иконку, логотип в шапке, тему оформления и макет интерфейса можно изменить и настроить как угодно: Настройки (Morphe) > Общие ⫶[/size]
+
+[/spoiler]
+[b]★ Особенности мода »[/b]
+✓ Все патчи Morphe для YouTube
+✓ Google и Yandex VoT (закадровый перевод видео)
+✓ Загрузчик видео с сохранением на устройство
+✓ Готовые настройки в стиле Premium с возможностью изменения
+✓ Дополнительная клон-версия с Dynamic Island на поддерживаемых устройствах
+✓ Проверка обновлений прямо в приложении
+
+[size=1]ⓘ Подмена видеопотоков использует настройки Morphe по умолчанию. Если возникнут проблемы с воспроизведением, воспользуйтесь инструкциями ниже в разделе Помощь »[/size]
+
+[b]✔ Что нового в моде »[/b]
+• Загрузчик видео с сохранением на устройство: выбор качества, библиотека и офлайн-плеер
+• Поиск по публикациям канала
+• Скорость воспроизведения в меню Shorts
+• Скачивание Shorts через меню (через внешний загрузчик или сохранение на устройство)
+• Скачивание изображений и GIF из публикаций
+• Опция быстрой загрузки по нажатию
+• Скачивание плейлистов без Premium
+• Комментарии в стиле Niconico поверх трансляций и их записей
+• Предупреждение при смене стиля панели навигации и включении планшетного макета в плеере
+• Перемотка кнопками «Назад» и «Далее» в уведомлении
+• Нативная очередь воспроизведения
+• Выбор стиля панели навигации
+
+[size=1]✓ Исправлены ошибки, различные улучшения[/size]
+
+[right][size=1][i]» powered by[/i] [b]Morphe Patches[/b]
+[i]» VoT patches by[/i] [b]Jav1x, MarcaD, Anddea, Sasha[/b]
+[i]» save to device patch by[/i] [b]Lavin, Ramik[/b]
+[i]» extra features & patched by[/i] [b]Ramik ☆[/b][/size][/right]
+
+[spoiler=⌹ Скриншоты »]
+
+[center][size=1]Original Black | OrgSoft Light
+
+S1 S2[/size][/center]
+
+[/spoiler]
+
+[center][b]Скачать ↆ Download[/b][/center]
+
+▷ Amoled [b][color="#ff0044"]YouTube Morphe v21.43.523[/color][/b] p1.49.0-dev.8+VoT Mod ✓
+
+[size=1]ⓘ Amoled-версия поддерживает Material You и различные темы оформления ⫶ Настройки (Morphe) > Общие[/size]
+
+▷ Original [b][color="#ff0044"]YouTube Morphe v21.43.523[/color][/b] p1.49.0-dev.8+VoT Mod (Clone) ✓
+
+[size=1]ⓘ Original-версия поддерживает Material You и различные темы оформления + BBK Dynamic Island (cn: vivo, iqoo, oppo, oneplus)[/size]
+
+[spoiler=★ Рекомендуемые настройки для YouTube Morphe от автора »]
+
+Чтобы мод работал максимально стабильно, с лучшими возможностями, и при этом оставался максимально похожим на оригинальный [b]YouTube (Premium)[/b], попробуйте эти [b]«рекомендуемые настройки»[/b]
+[b]✔ [color="#ff0044"] YouTube Morphe PRO Settings[/color][/b]
+[attachment="36420799:YouTube Morphe PRO Settings (1.49.0-dev.8+VoT).txt"]
+∆ Импортируйте текстовый файл или Скопируйте все значения из текстового файла и вставьте их в поле:
+ⓘ Настройки (Morphe) > Прочие > Резервное копирование настроек > вставить » Импортировать и Перезапустить ✓
+
+[size=1][i]обновлено для patch v1.49.0-dev.8+VoT[/i]
+
+✓ Это бэкап настройки для быстрого старта, позже вы сможете настроить параметры под себя.[/size]
+
+[/spoiler]
+[spoiler=⊕ Для работы модов требуется MicroG »]
+
+[b]✔ [color="#ff0044"]MicroG RE[/color][/b] [size=1](by WSTxda)[/size]
+🔗 [url="https://github.com/MorpheApp/MicroG-RE/releases/download/7.2.2/microg-7.2.2-noicon-arm64-v8a.apk"][color="#000000"]MicroG_RE-7.2.2.apk[/color][/url] (42,9 МБ)
+[size=1][i](если эта версия MicroG уже установлена, скачивать её заново не нужно)[/i][/size]
+
+1 - Сначала нужно установить MicroG RE [size=1](и обязательно предоставить ему разрешение на работу в фоне)[/size]
+2 - А затем установить нужный мод YouTube Morphe [size=1](и для корректной работы уведомлений и других фоновых функций обязательно предоставьте ему разрешение на работу в фоне)[/size]
+
+[/spoiler]
+[spoiler=⊕ Помощь »]
+
+Если возникнут проблемы с воспроизведением видео:
+[b]• Решение 1:[/b] Убедитесь, что в разделе «Подмена видеопотоков» выбран клиент по умолчанию → visionOS ✓ (или Android VR):
+ⓘ Настройки (Morphe) > Прочие > Подмена видеопотоков > Клиент по умолчанию » выберите visionOS ✓
+
+[b]• Решение 2:[/b] Исправление проблемы с воспроизведением путём генерации рабочего PoToken через сторонний генератор (через PotHelper)
+[b]✔ [color="#ff0044"]PotHelper[/color][/b] [size=1](by inotia00)[/size]
+🔗 [url="https://github.com/MorpheApp/PotHelper/releases/download/v1.1.1/pot-helper-1.1.1.apk"][color="#000000"]PoToken_Helper-1.1.1.apk[/color][/url] (180 КБ)
+[size=1][i](если эта версия PotHelper уже установлена, скачивать её заново не нужно)[/i][/size]
+
+1 - Скачать и установить PotHelper [size=1](и обязательно предоставить ему разрешение на работу в фоне)[/size]
+2 - В настройках YouTube Morphe отключите параметр «Подмена видеопотоков» [size=1]( ⓘ Настройки (Morphe) > Прочие > Подмена видеопотоков [отключить] )[/size]
+3 - В настройках YouTube Morphe включите параметр «Внешний провайдер PoToken» [size=1]( ⓘ Настройки (Morphe) > Прочие > Поставщик PoToken > Внешний провайдер PoToken [включить] )[/size]
+4 - Перезапустите приложение и убедитесь, что всё работает правильно ✓
+
+[size=1]ⓘ Этот способ работает на модификациях YouTube Morphe с патчем PoToken provider.[/size]
+
+[/spoiler]
