@@ -107,7 +107,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Additional patches and code from extras/ are added to the official ones
+          # Additional patches and code from extras/ are added to the official ones.
+          # Extras only add files: the official Morphe files are never replaced.
+          clash=0
+          for dir in patches extensions; do
+            while IFS= read -r -d '' f; do
+              rel=${f#"$GITHUB_WORKSPACE/extras/$dir/"}
+              if [ -e "$dir/$rel" ]; then
+                echo "::error::extras/$dir/$rel would replace an official Morphe file"
+                clash=1
+              fi
+            done < <(find "$GITHUB_WORKSPACE/extras/$dir" -type f -print0)
+          done
+          [ "$clash" -eq 0 ] || exit 1
           cp -rv "$GITHUB_WORKSPACE"/extras/patches/. patches/
           cp -rv "$GITHUB_WORKSPACE"/extras/extensions/. extensions/
           # Strings from extras/strings/<locale>/strings.xml are appended to the YouTube strings

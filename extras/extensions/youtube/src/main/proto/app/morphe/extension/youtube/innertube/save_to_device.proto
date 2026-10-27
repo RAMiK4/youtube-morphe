@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package app.morphe.extension.youtube.innertube.savetodevice;
+
+option optimize_for = LITE_RUNTIME;
+option java_package = "app.morphe.extension.youtube.innertube";
+option java_outer_classname = "SaveToDeviceResponse";
+
+// The parts of a player response read by the device downloader.
+// Only the fields that are read are declared.
+
+message DownloadPlayerResponse {
+  optional DownloadStreamingData streamingData = 4;
+  optional DownloadVideoDetails videoDetails = 11;
+}
+
+message DownloadVideoDetails {
+  optional string videoId = 1;
+  optional string title = 15;
+  optional int32 lengthSeconds = 16;
+  optional string channelId = 19;
+  optional DownloadThumbnailList thumbnail = 25;
+  optional string ownerChannelName = 33;
+}
+
+message DownloadThumbnailList {
+  repeated DownloadThumbnail thumbnails = 1;
+}
+
+message DownloadThumbnail {
+  optional string url = 1;
+  optional int32 width = 2;
+  optional int32 height = 3;
+}
+
+message DownloadStreamingData {
+  repeated DownloadFormat adaptiveFormats = 3;
+}
+
+message DownloadFormat {
+  optional int32 itag = 1;
+  optional string url = 2;
+  optional string mimeType = 5;
+  optional int32 bitrate = 6;
+  optional int32 width = 7;
+  optional int32 height = 8;
+  optional int64 contentLength = 12;
+  optional int32 fps = 25;
+  optional string qualityLabel = 26;
+}
