@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.lang.ref.WeakReference;
 import java.util.WeakHashMap;
 
 import app.morphe.extension.shared.Logger;
@@ -73,6 +74,10 @@ public final class OfflineScreens {
 
     private static final WeakHashMap<Activity, Screen> screens = new WeakHashMap<>();
     private static boolean lifecycleCallbacksRegistered;
+
+    /** The host activity of an offline screen that is in front, if any. */
+    @Nullable
+    private static WeakReference<Activity> resumedHost;
 
     private OfflineScreens() {
     }
@@ -189,6 +194,15 @@ public final class OfflineScreens {
         if (!hostsScreen(activity)) return false;
         if (!handleBackPress(activity)) activity.finish();
         return true;
+    }
+
+    /**
+     * Same as {@link #onBackPressed(Activity)}, for Morphe versions that do not pass the activity.
+     * The back press belongs to the host activity in front.
+     */
+    public static boolean onBackPressed() {
+        Activity activity = resumedHost != null ? resumedHost.get() : null;
+        return activity != null && onBackPressed(activity);
     }
 
     /**
@@ -322,6 +336,7 @@ public final class OfflineScreens {
             @Override
             public void onActivityResumed(@NonNull Activity activity) {
                 Screen screen = screens.get(activity);
+                resumedHost = screen != null ? new WeakReference<>(activity) : null;
                 if (screen != null) screen.onResume();
             }
 

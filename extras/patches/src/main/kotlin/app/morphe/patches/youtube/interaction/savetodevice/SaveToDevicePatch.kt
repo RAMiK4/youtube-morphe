@@ -60,9 +60,6 @@ private const val EXTENSION_DOWNLOADS_PATCH =
 private const val EXTENSION_ACTIVITY_HOOK =
     "Lapp/morphe/extension/youtube/settings/YouTubeActivityHook;"
 
-/** The activity of the Morphe settings, which also hosts the saved videos and the offline player. */
-private const val HOST_ACTIVITY = "Lcom/google/android/gms/common/api/GoogleApiActivity;"
-
 private val saveToDeviceResourcePatch = resourcePatch {
     dependsOn(settingsPatch)
 
@@ -367,15 +364,32 @@ val saveToDevicePatch = bytecodePatch(
             "return-void"
         )
 
-        // Back presses of the offline screens.
-        mutableClassDefBy(HOST_ACTIVITY).methods.first {
-            it.name == "onBackPressed" && it.parameterTypes.isEmpty()
-        }.skipIfTrue(
-            0,
-            "invoke-static { p0 }, $EXTENSION_OFFLINE_SCREENS->onBackPressed(Landroid/app/Activity;)Z",
-            null,
-            "return-void"
-        )
+        // Back presses of the offline screens. The back press method of the host activity is created
+        // by the settings patch and calls handleBackPress(), which returns if the back press was handled.
+        // The created method itself is not changed, since its branches do not move with added code.
+        mutableClassDefBy(EXTENSION_ACTIVITY_HOOK).methods.let { methods ->
+            val withActivity = methods.firstOrNull {
+                it.name == "handleBackPress" && it.parameterTypes == listOf("Landroid/app/Activity;")
+            }
+            if (withActivity != null) {
+                withActivity.skipIfTrue(
+                    0,
+                    "invoke-static { p0 }, $EXTENSION_OFFLINE_SCREENS->onBackPressed(Landroid/app/Activity;)Z",
+                    null,
+                    "return v0"
+                )
+            } else {
+                // Older Morphe versions do not pass the activity.
+                methods.first {
+                    it.name == "handleBackPress" && it.parameterTypes.isEmpty()
+                }.skipIfTrue(
+                    0,
+                    "invoke-static { }, $EXTENSION_OFFLINE_SCREENS->onBackPressed()Z",
+                    null,
+                    "return v0"
+                )
+            }
+        }
 
         // endregion
     }
