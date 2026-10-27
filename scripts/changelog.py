@@ -21,7 +21,8 @@ Each group title stands between two separator lines, followed by its changes, wi
     ────────────────
     • ...              (Morphe fixes, then the fixes of the mod from MOD_FIXES)
 
-The release notes add the files table after them under the same kind of title.
+The release notes use "## <title>" headings instead (GitHub draws a thin rule under them),
+and add the files table after them under the same kind of heading.
 
 Newer versions come first; within a version the newest change is listed first, by the date of its commit
 (DATES: lines of "<commit hash> <unix time>", from git log). Without dates the order of Morphe is kept.
@@ -195,8 +196,8 @@ def main():
 
     md, txt = [], []
     for title, items in groups:
-        # Markdown: blank lines keep the separators out of the list and the heading.
-        md += [SEPARATOR, "", f"### {title}", "", SEPARATOR, ""]
+        # Markdown: "##" headings get GitHub's thin rule under them.
+        md += [f"## {title}", ""]
         md += [f"* {item}" for item in items]
         md.append("")
         txt += [SEPARATOR, title, SEPARATOR]
