@@ -96,13 +96,12 @@ jobs:
       - name: Generate changelog
         run: |
           # YouTube part of the Morphe changelog: a stable version lists its own section,
-          # a dev version its own and the two previous dev sections (newest first)
-          # Grouped by type, newest change first, with the features of the mod
-          # after the new features (release notes only)
+          # a dev version the new features of itself and the previous dev, and its own fixes
+          # followed by the fixes of the mod (notes/mod-fixes.md). Newest change first.
           git -C patches-src log --format='%H %ct' > "$RUNNER_TEMP/commit-dates.txt"
           python3 -I scripts/changelog.py patches-src/CHANGELOG.md "$PATCHES_VER" \
             "$RUNNER_TEMP/changes.md" "$RUNNER_TEMP/changes.txt" \
-            --mod-features notes/mod-features.md --dates "$RUNNER_TEMP/commit-dates.txt"
+            --mod-fixes notes/mod-fixes.md --dates "$RUNNER_TEMP/commit-dates.txt"
           cat "$RUNNER_TEMP/changes.txt"
 
       - name: Setup Gradle
@@ -415,10 +414,10 @@ jobs:
             echo
             echo "### 📦 Files"
             echo
-            echo "| File | Package | |"
-            echo "|---|---|---|"
-            echo "| \`$MORPHE\` | \`app.morphe.android.youtube\` | Material You and themes: *Morphe settings → General* |"
-            echo "| \`$HIBY\` | \`com.hiby.music\` | Material You and themes + BBK Dynamic Island (China ROMs: vivo, iQOO, OPPO, OnePlus) |"
+            echo "| File | Package |"
+            echo "|---|---|"
+            echo "| \`$MORPHE\` | \`app.morphe.android.youtube\` |"
+            echo "| \`$HIBY\` | \`com.hiby.music\` |"
           } > "$RUNNER_TEMP/notes.md"
           FILES=()
           for f in "$RUNNER_TEMP"/out/*.apk; do FILES+=("$f#$(cat "$f.label")"); done

@@ -3,26 +3,26 @@
 Builds the YouTube part of the Morphe patches changelog for a patches version.
 
 Stable version: its own section (it already lists everything since the previous stable).
-Dev version: the last three dev sections (itself included) since the previous stable version.
+Dev version: new features of the last two dev sections (itself included),
+bug fixes and improvements of the version itself only.
 
-The changes are grouped by type (new features, bug fixes, improvements),
-and each group lists the versions newest first:
+Each group has a title, a light separator and its changes, without version headings:
 
     ### ✨ New Features
-    #### 1.49.0-dev.8
-    * ...
-    ### 🌟 Mod Features        (Markdown only, from MOD_FEATURES)
+    ---
     * ...
     ### 🐛 Bug Fixes
-    #### 1.49.0-dev.8
-    * ...
+    ---
+    * ...              (Morphe fixes, then the fixes of the mod from MOD_FIXES)
 
-Within a version, the newest change is listed first, by the date of its commit
+Newer versions come first; within a version the newest change is listed first, by the date of its commit
 (DATES: lines of "<commit hash> <unix time>", from git log). Without dates the order of Morphe is kept.
+
+MOD_FIXES: "## <patches version>" headings with "* " items, listed after the Morphe fixes of that version.
 
 The Markdown file is the release notes, the text file is the changelog of the in-app update dialog.
 
-Usage: changelog.py CHANGELOG.md VERSION OUT_MARKDOWN OUT_TEXT [--mod-features FILE] [--dates FILE]
+Usage: changelog.py CHANGELOG.md VERSION OUT_MARKDOWN OUT_TEXT [--mod-fixes FILE] [--dates FILE]
 """
 import argparse
 import re
@@ -31,7 +31,8 @@ SECTION = re.compile(r"^##\s+\[([^\]]+)\]")
 COMMIT = re.compile(r"\(\[([0-9a-f]{7,40})\]\(")
 EXCLUDED_SCOPES = ("reddit", "music")
 SKIPPED_GROUPS = ("app support",)
-DEV_SECTIONS = 3  # Dev changelogs: the version itself and the two before it.
+DEV_FEATURE_SECTIONS = 2  # Dev changelogs: new features of the version itself and the one before it.
+TEXT_SEPARATOR = "─" * 16
 
 # Change types in the order they are shown. Older changelogs have titles without emoji.
 GROUPS = (
@@ -39,7 +40,7 @@ GROUPS = (
     ("fix", "🐛 Bug Fixes"),
     ("improvement", "🔧 Improvements"),
 )
-MOD_FEATURES_TITLE = "🌟 Mod Features"
+FIX_GROUP = 1
 
 
 def clean(text):
@@ -103,14 +104,16 @@ def select(sections, version):
             break
         if section["groups"]:
             selected.append(section)
-    return selected[:DEV_SECTIONS]
+    return selected[:DEV_FEATURE_SECTIONS]
 
 
-def read_mod_features(path):
-    items = []
+def read_mod_fixes(path, version):
+    items, current = [], None
     for line in open(path, encoding="utf-8"):
         line = line.strip()
-        if line.startswith(("* ", "- ")):
+        if line.startswith("## "):
+            current = line[3:].strip().lstrip("v")
+        elif current == version and line.startswith(("* ", "- ")):
             items.append(line[2:].strip())
     return items
 
@@ -147,33 +150,31 @@ def main():
     parser.add_argument("version")
     parser.add_argument("out_md")
     parser.add_argument("out_txt")
-    parser.add_argument("--mod-features")
+    parser.add_argument("--mod-fixes")
     parser.add_argument("--dates")
     args = parser.parse_args()
 
-    mod_features = read_mod_features(args.mod_features) if args.mod_features else []
+    version = args.version.lstrip("v")
     dates = read_dates(args.dates) if args.dates else {}
-    selected = select(parse(args.changelog), args.version.lstrip("v"))
+    selected = select(parse(args.changelog), version)
+    mod_fixes = read_mod_fixes(args.mod_fixes, version) if args.mod_fixes else []
 
     md, txt = [], []
     for index, (_, title) in enumerate(GROUPS):
-        versions = [(s["version"], newest_first(s["groups"][index], dates))
-                    for s in selected if index in s["groups"]]
-        if versions:
-            md.append(f"### {title}\n")
-            txt.append(title)
-            for name, items in versions:
-                md.append(f"#### {name}\n")
-                md.extend(f"* {item}" for item in items)
-                md.append("")
-                txt.append(f"  {name}")
-                txt.extend(f"  • {plain(item)}" for item in items)
-                txt.append("")
-        # The features of the mod follow the new features of Morphe.
-        if index == 0 and mod_features:
-            md.append(f"### {MOD_FEATURES_TITLE}\n")
-            md.extend(f"* {item}" for item in mod_features)
-            md.append("")
+        # New features: all selected versions. Fixes and improvements: the version itself only.
+        sections = selected if index == 0 else [s for s in selected if s["version"] == version]
+        items = [item for s in sections if index in s["groups"]
+                 for item in newest_first(s["groups"][index], dates)]
+        if index == FIX_GROUP:
+            items += mod_fixes
+        if not items:
+            continue
+        md += [f"### {title}", "", "---", ""]
+        md += [f"* {item}" for item in items]
+        md.append("")
+        txt += [title, TEXT_SEPARATOR]
+        txt += [f"• {plain(item)}" for item in items]
+        txt.append("")
 
     open(args.out_md, "w", encoding="utf-8").write("\n".join(md).strip() + "\n")
     open(args.out_txt, "w", encoding="utf-8").write("\n".join(txt).strip() + "\n")
