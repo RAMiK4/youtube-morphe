@@ -17,14 +17,18 @@ and each group lists the versions newest first:
     #### 1.49.0-dev.8
     * ...
 
+Within a version, the newest change is listed first, by the date of its commit
+(DATES: lines of "<commit hash> <unix time>", from git log). Without dates the order of Morphe is kept.
+
 The Markdown file is the release notes, the text file is the changelog of the in-app update dialog.
 
-Usage: changelog.py CHANGELOG.md VERSION OUT_MARKDOWN OUT_TEXT [MOD_FEATURES.md]
+Usage: changelog.py CHANGELOG.md VERSION OUT_MARKDOWN OUT_TEXT [--mod-features FILE] [--dates FILE]
 """
+import argparse
 import re
-import sys
 
 SECTION = re.compile(r"^##\s+\[([^\]]+)\]")
+COMMIT = re.compile(r"\(\[([0-9a-f]{7,40})\]\(")
 EXCLUDED_SCOPES = ("reddit", "music")
 SKIPPED_GROUPS = ("app support",)
 DEV_SECTIONS = 3  # Dev changelogs: the version itself and the two before it.
@@ -66,7 +70,7 @@ def group_index(title):
 
 
 def parse(path):
-    """[{version, groups: {group index: [items]}}], newest first."""
+    """[{version, groups: {group index: [(item, commit)]}}], newest first."""
     sections, current, group = [], None, None
     for line in open(path, encoding="utf-8"):
         line = line.rstrip("\n")
@@ -79,9 +83,11 @@ def parse(path):
             title = line[4:].strip()
             group = None if any(word in title.lower() for word in SKIPPED_GROUPS) else group_index(title)
         elif current is not None and group is not None and line.startswith("* "):
+            commit = COMMIT.findall(line)
             item = clean(line[2:])
             if relevant(item):
-                current["groups"].setdefault(group, []).append(strip_app(item))
+                current["groups"].setdefault(group, []).append(
+                    (strip_app(item), commit[-1] if commit else None))
     return sections
 
 
@@ -109,18 +115,50 @@ def read_mod_features(path):
     return items
 
 
+def read_dates(path):
+    dates = {}
+    for line in open(path, encoding="utf-8"):
+        parts = line.split()
+        if len(parts) == 2 and parts[1].isdigit():
+            dates[parts[0]] = int(parts[1])
+    return dates
+
+
+def newest_first(items, dates):
+    """Sorts by commit date, newest first. Items without a known date keep their place at the end."""
+    def date(commit):
+        if not commit:
+            return None
+        return next((t for h, t in dates.items() if h.startswith(commit)), None)
+
+    known = [(date(c), i, text) for i, (text, c) in enumerate(items)]
+    dated = sorted((x for x in known if x[0] is not None), key=lambda x: (-x[0], x[1]))
+    undated = [x for x in known if x[0] is None]
+    return [text for _, _, text in dated + undated]
+
+
 def plain(item):
     return item.replace("**", "").replace("`", "")
 
 
 def main():
-    path, version, out_md, out_txt = sys.argv[1:5]
-    mod_features = read_mod_features(sys.argv[5]) if len(sys.argv) > 5 else []
-    selected = select(parse(path), version.lstrip("v"))
+    parser = argparse.ArgumentParser()
+    parser.add_argument("changelog")
+    parser.add_argument("version")
+    parser.add_argument("out_md")
+    parser.add_argument("out_txt")
+    parser.add_argument("--mod-features")
+    parser.add_argument("--dates")
+    args = parser.parse_args()
+
+    mod_features = read_mod_features(args.mod_features) if args.mod_features else []
+    dates = read_dates(args.dates) if args.dates else {}
+    selected = select(parse(args.changelog), args.version.lstrip("v"))
 
     md, txt = [], []
     for index, (_, title) in enumerate(GROUPS):
-        versions = [(s["version"], s["groups"][index]) for s in selected if index in s["groups"]]
+        versions = [(s["version"], newest_first(s["groups"][index], dates))
+                    for s in selected if index in s["groups"]]
         if versions:
             md.append(f"### {title}\n")
             txt.append(title)
@@ -137,8 +175,8 @@ def main():
             md.extend(f"* {item}" for item in mod_features)
             md.append("")
 
-    open(out_md, "w", encoding="utf-8").write("\n".join(md).strip() + "\n")
-    open(out_txt, "w", encoding="utf-8").write("\n".join(txt).strip() + "\n")
+    open(args.out_md, "w", encoding="utf-8").write("\n".join(md).strip() + "\n")
+    open(args.out_txt, "w", encoding="utf-8").write("\n".join(txt).strip() + "\n")
 
 
 if __name__ == "__main__":
