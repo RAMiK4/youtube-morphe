@@ -1,4 +1,4 @@
-<!-- Features of the mod, shown on the repository page. -->
+<!-- Features of the mod, shown in the release notes and the in-app changelog under "🌟 Mod Features" and on the repository page. -->
 * All Morphe patches for YouTube
 * Google and Yandex voice-over translation (VoT)
 * Video downloader with Save to device

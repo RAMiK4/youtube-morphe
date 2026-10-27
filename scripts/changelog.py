@@ -6,14 +6,22 @@ Stable version: its own section (it already lists everything since the previous 
 Dev version: new features of the last two dev sections (itself included),
 bug fixes and improvements of the version itself only.
 
-Each group has a title, a light separator and its changes, without version headings:
+Each group title stands between two separator lines, followed by its changes, without version headings:
 
-    ### ✨ New Features
-    ---
-    * ...
-    ### 🐛 Bug Fixes
-    ---
-    * ...              (Morphe fixes, then the fixes of the mod from MOD_FIXES)
+    ────────────────
+    ✨ New Features
+    ────────────────
+    • ...
+    ────────────────
+    🌟 Mod Features     (from MOD_FEATURES)
+    ────────────────
+    • ...
+    ────────────────
+    🐛 Bug Fixes
+    ────────────────
+    • ...              (Morphe fixes, then the fixes of the mod from MOD_FIXES)
+
+The release notes add the files table after them under the same kind of title.
 
 Newer versions come first; within a version the newest change is listed first, by the date of its commit
 (DATES: lines of "<commit hash> <unix time>", from git log). Without dates the order of Morphe is kept.
@@ -22,7 +30,7 @@ MOD_FIXES: "## <patches version>" headings with "* " items, listed after the Mor
 
 The Markdown file is the release notes, the text file is the changelog of the in-app update dialog.
 
-Usage: changelog.py CHANGELOG.md VERSION OUT_MARKDOWN OUT_TEXT [--mod-fixes FILE] [--dates FILE]
+Usage: changelog.py CHANGELOG.md VERSION OUT_MARKDOWN OUT_TEXT [--mod-features FILE] [--mod-fixes FILE] [--dates FILE]
 """
 import argparse
 import re
@@ -32,7 +40,7 @@ COMMIT = re.compile(r"\(\[([0-9a-f]{7,40})\]\(")
 EXCLUDED_SCOPES = ("reddit", "music")
 SKIPPED_GROUPS = ("app support",)
 DEV_FEATURE_SECTIONS = 2  # Dev changelogs: new features of the version itself and the one before it.
-TEXT_SEPARATOR = "─" * 16
+SEPARATOR = "─" * 16
 
 # Change types in the order they are shown. Older changelogs have titles without emoji.
 GROUPS = (
@@ -41,6 +49,7 @@ GROUPS = (
     ("improvement", "🔧 Improvements"),
 )
 FIX_GROUP = 1
+MOD_FEATURES_TITLE = "🌟 Mod Features"
 
 
 def clean(text):
@@ -107,6 +116,15 @@ def select(sections, version):
     return selected[:DEV_FEATURE_SECTIONS]
 
 
+def read_mod_features(path):
+    items = []
+    for line in open(path, encoding="utf-8"):
+        line = line.strip()
+        if line.startswith(("* ", "- ")):
+            items.append(line[2:].strip())
+    return items
+
+
 def read_mod_fixes(path, version):
     items, current = [], None
     for line in open(path, encoding="utf-8"):
@@ -150,6 +168,7 @@ def main():
     parser.add_argument("version")
     parser.add_argument("out_md")
     parser.add_argument("out_txt")
+    parser.add_argument("--mod-features")
     parser.add_argument("--mod-fixes")
     parser.add_argument("--dates")
     args = parser.parse_args()
@@ -158,8 +177,9 @@ def main():
     dates = read_dates(args.dates) if args.dates else {}
     selected = select(parse(args.changelog), version)
     mod_fixes = read_mod_fixes(args.mod_fixes, version) if args.mod_fixes else []
+    mod_features = read_mod_features(args.mod_features) if args.mod_features else []
 
-    md, txt = [], []
+    groups = []
     for index, (_, title) in enumerate(GROUPS):
         # New features: all selected versions. Fixes and improvements: the version itself only.
         sections = selected if index == 0 else [s for s in selected if s["version"] == version]
@@ -167,14 +187,20 @@ def main():
                  for item in newest_first(s["groups"][index], dates)]
         if index == FIX_GROUP:
             items += mod_fixes
-        if not items:
-            continue
-        md += [f"### {title}", "", "---", ""]
+        if items:
+            groups.append((title, items))
+        # The features of the mod follow the new features of Morphe.
+        if index == 0 and mod_features:
+            groups.append((MOD_FEATURES_TITLE, mod_features))
+
+    md, txt = [], []
+    for title, items in groups:
+        # Markdown: blank lines keep the separators out of the list and the heading.
+        md += [SEPARATOR, "", f"### {title}", "", SEPARATOR, ""]
         md += [f"* {item}" for item in items]
         md.append("")
-        txt += [title, TEXT_SEPARATOR]
+        txt += [SEPARATOR, title, SEPARATOR]
         txt += [f"• {plain(item)}" for item in items]
-        txt.append("")
 
     open(args.out_md, "w", encoding="utf-8").write("\n".join(md).strip() + "\n")
     open(args.out_txt, "w", encoding="utf-8").write("\n".join(txt).strip() + "\n")

@@ -9,7 +9,7 @@
 
 Every published build becomes the latest release. The workflow builds the official Morphe patches with the additions in `extras/`, applies them together with the latest YaVoT release (built from source with the fixes in `addons/yavot/`), verifies package name and signature, publishes the release and updates `updates/*.json` for the in-app update check.
 
-The changelog is generated from the Morphe changelog (YouTube only), newest first: a stable version lists its own section; a dev version lists the new features of itself and the previous dev version, and the bug fixes of itself only. Fixes of the mod are added under `## <patches version>` in `notes/mod-fixes.md` and listed after the Morphe fixes of that version. The release notes and the in-app dialog show the same order: New Features, Bug Fixes, then the files (release notes only). Optional translations for the in-app dialog: `changelog/<language>.md` whose first line is `<!-- <patches version> -->`.
+The changelog is generated from the Morphe changelog (YouTube only), newest first: a stable version lists its own section; a dev version lists the new features of itself and the previous dev version, and the bug fixes of itself only. Fixes of the mod are added under `## <patches version>` in `notes/mod-fixes.md` and listed after the Morphe fixes of that version. The release notes and the in-app dialog show the same order, each title between two separator lines: New Features, Mod Features (`notes/mod-features.md`), Bug Fixes, then the files (release notes only). Optional translations for the in-app dialog: `changelog/<language>.md` whose first line is `<!-- <patches version> -->`.
 
 ## Configuration
 

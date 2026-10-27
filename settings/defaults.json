@@ -99,6 +99,7 @@
   "shorts_autoplay_background": false,
   "shorts_quality_default_mobile": 1080,
   "shorts_quality_default_wifi": 1080,
+  "splash_screen_style": "rive_glow",
   "swap_create_with_notifications_button": false,
   "swipe_left_zone": "brightness",
   "swipe_right_zone": "volume",

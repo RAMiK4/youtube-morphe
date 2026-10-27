@@ -101,7 +101,7 @@ jobs:
           git -C patches-src log --format='%H %ct' > "$RUNNER_TEMP/commit-dates.txt"
           python3 -I scripts/changelog.py patches-src/CHANGELOG.md "$PATCHES_VER" \
             "$RUNNER_TEMP/changes.md" "$RUNNER_TEMP/changes.txt" \
-            --mod-fixes notes/mod-fixes.md --dates "$RUNNER_TEMP/commit-dates.txt"
+            --mod-features notes/mod-features.md --mod-fixes notes/mod-fixes.md --dates "$RUNNER_TEMP/commit-dates.txt"
           cat "$RUNNER_TEMP/changes.txt"
 
       - name: Setup Gradle
@@ -411,8 +411,11 @@ jobs:
           {
             cat "$RUNNER_TEMP/changes.md"
             echo
+            echo "────────────────"
             echo
             echo "### 📦 Files"
+            echo
+            echo "────────────────"
             echo
             echo "| File | Package |"
             echo "|---|---|"
