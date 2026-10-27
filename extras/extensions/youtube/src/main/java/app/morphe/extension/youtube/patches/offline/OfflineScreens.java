@@ -181,6 +181,17 @@ public final class OfflineScreens {
     }
 
     /**
+     * Injection point, at the start of {@code onBackPressed()} of the host activity.
+     *
+     * @return True if the activity hosts an offline screen and the back press was handled here.
+     */
+    public static boolean onBackPressed(Activity activity) {
+        if (!hostsScreen(activity)) return false;
+        if (!handleBackPress(activity)) activity.finish();
+        return true;
+    }
+
+    /**
      * Injection point, at the start of YouTube's browse-endpoint command handler.
      * Opens the offline library instead of YouTube's Downloads page. The navigation is cancelled,
      * so YouTube stays on the current page and Back from the library returns there.

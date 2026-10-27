@@ -370,23 +370,12 @@ val saveToDevicePatch = bytecodePatch(
         // Back presses of the offline screens.
         mutableClassDefBy(HOST_ACTIVITY).methods.first {
             it.name == "onBackPressed" && it.parameterTypes.isEmpty()
-        }.apply {
-            addInstructionsWithLabels(
-                0,
-                """
-                    invoke-static { p0 }, $EXTENSION_OFFLINE_SCREENS->hostsScreen(Landroid/app/Activity;)Z
-                    move-result v0
-                    if-eqz v0, :original_code
-                    invoke-static { p0 }, $EXTENSION_OFFLINE_SCREENS->handleBackPress(Landroid/app/Activity;)Z
-                    move-result v0
-                    if-nez v0, :back_handled
-                    invoke-virtual { p0 }, Landroid/app/Activity;->finish()V
-                    :back_handled
-                    return-void
-                """,
-                ExternalLabel("original_code", getInstruction(0))
-            )
-        }
+        }.skipIfTrue(
+            0,
+            "invoke-static { p0 }, $EXTENSION_OFFLINE_SCREENS->onBackPressed(Landroid/app/Activity;)Z",
+            null,
+            "return-void"
+        )
 
         // endregion
     }

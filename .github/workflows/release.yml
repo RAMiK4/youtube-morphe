@@ -347,8 +347,8 @@ jobs:
             com.hiby.music true \
             '{"darkDefault":"APP_DEFAULT","lightDefault":"CUSTOM","lightCustomDefault":"#F0F0F0","changeForegroundDefault":true}'
           # Amoled: black #000000 / white #FFFFFF (Morphe defaults)
-          # Test builds from a patches branch: only the clone variant, which is the one tested
-          if [ -z "${{ inputs.patches_source }}" ]; then
+          # Test builds (not published): only the clone variant, which is the one tested
+          if [ "${{ inputs.publish }}" != "false" ] && [ -z "${{ inputs.patches_source }}" ]; then
           build_variant morphe "[Amoled+]_Mod"               "Amoled_Mod" \
             app.morphe.android.youtube false \
             '{}'
