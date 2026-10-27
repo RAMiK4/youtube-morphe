@@ -146,13 +146,50 @@ jobs:
           ./gradlew :patches:buildAndroid --no-daemon
           cp patches/build/libs/patches-*.mpp "$RUNNER_TEMP/patches.mpp"
 
-      - name: Download YaVoT add-on
+      - name: Build YaVoT add-on
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # The latest YaVoT release is built from source with the fixes in addons/yavot/.
+          # Its own release workflow pins the Morphe host it compiles against; the same commits are used here.
           TAG=$(gh api "repos/$YAVOT_REPO/releases/latest" -q .tag_name)
-          gh release download "$TAG" -R "$YAVOT_REPO" -p '*.mpp' -D "$RUNNER_TEMP/yavot"
-          mv "$RUNNER_TEMP"/yavot/*.mpp "$RUNNER_TEMP/yavot.mpp"
           echo "YaVoT: $TAG"
           echo "YAVOT_TAG=$TAG" >> "$GITHUB_ENV"
+          WORK="$RUNNER_TEMP/yavot-build"
+          mkdir -p "$WORK"
+          git clone -q --depth 1 -b "$TAG" "https://github.com/$YAVOT_REPO" "$WORK/morphe-patches-yavot"
+          WF="$WORK/morphe-patches-yavot/.github/workflows/release.yml"
+          for repo in morphe-patches morphe-patcher morphe-patches-library; do
+            ref=$(awk -v r="repository: MorpheApp/$repo" '$0 ~ r"$" {f=1; next} f && /^ *ref:/ {sub(/.*ref: */, ""); print; exit}' "$WF")
+            [ -n "$ref" ] || { echo "::error::YaVoT build ref for $repo not found"; exit 1; }
+            echo "$repo: $ref"
+            git init -q "$WORK/$repo"
+            git -C "$WORK/$repo" fetch -q --depth 1 "https://github.com/MorpheApp/$repo" "$ref"
+            git -C "$WORK/$repo" checkout -q FETCH_HEAD
+          done
+          cd "$WORK/morphe-patches-yavot"
+          for f in "$GITHUB_WORKSPACE"/addons/yavot/*.patch; do
+            if git apply --check "$f" 2>/dev/null; then
+              git apply "$f"
+              echo "Applied: $(basename "$f")"
+            elif git apply --check -R "$f" 2>/dev/null; then
+              echo "::notice::$(basename "$f") is already in YaVoT $TAG, skipped"
+            else
+              echo "::error::$(basename "$f") no longer applies to YaVoT $TAG"
+              exit 1
+            fi
+          done
+          # Morphe 1.49.0-dev.7+ changed Event.addObserver; no direct Kotlin Function1 observers may remain
+          if grep -rn "getOnChange().addObserver(" extensions --include=*.java | grep -v callPlayerTypeEvent; then
+            echo "::error::YaVoT $TAG still uses the old Event observer API"
+            exit 1
+          fi
+          (cd "$WORK/morphe-patches" && ./gradlew :extensions:youtube:compileReleaseKotlin \
+            :extensions:youtube:compileReleaseJavaWithJavac --no-daemon)
+          ./gradlew :patches:buildAndroid --no-daemon
+          ls patches/build/libs/
+          cp patches/build/libs/patches-*.mpp "$RUNNER_TEMP/yavot.mpp"
 
       - name: Download Morphe CLI
         run: |

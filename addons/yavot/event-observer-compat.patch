@@ -1,0 +1,116 @@
+diff --git a/extensions/youtube/src/main/java/app/morphe/extension/youtube/patches/yandexvot/YandexVoiceOverTranslationBottomSheet.java b/extensions/youtube/src/main/java/app/morphe/extension/youtube/patches/yandexvot/YandexVoiceOverTranslationBottomSheet.java
+index e5c039a..74e8eb5 100644
+--- a/extensions/youtube/src/main/java/app/morphe/extension/youtube/patches/yandexvot/YandexVoiceOverTranslationBottomSheet.java
++++ b/extensions/youtube/src/main/java/app/morphe/extension/youtube/patches/yandexvot/YandexVoiceOverTranslationBottomSheet.java
+@@ -34,6 +34,8 @@ import android.widget.Switch;
+ import android.widget.TextView;
+ 
+ import java.lang.ref.WeakReference;
++import java.lang.reflect.Method;
++import java.lang.reflect.Proxy;
+ 
+ import app.morphe.extension.shared.Logger;
+ import app.morphe.extension.shared.settings.IntegerSetting;
+@@ -44,8 +46,6 @@ import app.morphe.extension.shared.ui.SheetBottomDialog;
+ import app.morphe.extension.youtube.patches.playback.speed.CustomPlaybackSpeedPatch;
+ import app.morphe.extension.youtube.settings.YandexVotSettings;
+ import app.morphe.extension.youtube.shared.PlayerType;
+-import kotlin.Unit;
+-import kotlin.jvm.functions.Function1;
+ 
+ @SuppressWarnings("unused")
+ public class YandexVoiceOverTranslationBottomSheet {
+@@ -146,21 +146,20 @@ public class YandexVoiceOverTranslationBottomSheet {
+             currentDialog = new WeakReference<>(dialog);
+ 
+             // Dismiss when entering PiP mode.
+-            Function1<PlayerType, Unit> playerTypeObserver = new Function1<>() {
+-                @Override
+-                public Unit invoke(PlayerType type) {
+-                    SheetBottomDialog.SlideDialog current = currentDialog.get();
+-                    if (current == null || !current.isShowing()) {
+-                        PlayerType.getOnChange().removeObserver(this);
+-                    } else if (type == PlayerType.WATCH_WHILE_PICTURE_IN_PICTURE) {
+-                        current.dismiss();
+-                    }
+-                    return Unit.INSTANCE;
++            // Event.addObserver changed from Kotlin Function1 to java.util.function.Consumer
++            // in Morphe Patches 1.49.0-dev.7, so the observer is bound reflectively to work with both.
++            final Object[] observerHolder = new Object[1];
++            observerHolder[0] = createPlayerTypeObserver(type -> {
++                SheetBottomDialog.SlideDialog current = currentDialog.get();
++                if (current == null || !current.isShowing()) {
++                    callPlayerTypeEvent("removeObserver", observerHolder[0]);
++                } else if (type == PlayerType.WATCH_WHILE_PICTURE_IN_PICTURE) {
++                    current.dismiss();
+                 }
+-            };
+-            PlayerType.getOnChange().addObserver(playerTypeObserver);
++            });
++            callPlayerTypeEvent("addObserver", observerHolder[0]);
+             dialog.setOnDismissListener(d -> {
+-                PlayerType.getOnChange().removeObserver(playerTypeObserver);
++                callPlayerTypeEvent("removeObserver", observerHolder[0]);
+                 TextView current = currentStatusText != null ? currentStatusText.get() : null;
+                 if (current != null) current.removeCallbacks(STATUS_COUNTDOWN_TICK);
+                 currentStatusText = null;
+@@ -478,4 +477,59 @@ public class YandexVoiceOverTranslationBottomSheet {
+         return row;
+     }
+ 
++
++    /**
++     * Finds the single-argument observer method on PlayerType.getOnChange() by name.
++     */
++    private static Method findPlayerTypeEventMethod(String name) {
++        for (Method method : PlayerType.getOnChange().getClass().getMethods()) {
++            if (method.getName().equals(name) && method.getParameterTypes().length == 1
++                    && method.getParameterTypes()[0].isInterface()) {
++                return method;
++            }
++        }
++        return null;
++    }
++
++    /**
++     * Creates an observer matching whatever functional interface the host Event expects
++     * (kotlin.jvm.functions.Function1 on older hosts, java.util.function.Consumer on newer ones).
++     */
++    private static Object createPlayerTypeObserver(java.util.function.Consumer<PlayerType> callback) {
++        Method addObserver = findPlayerTypeEventMethod("addObserver");
++        if (addObserver == null) return null;
++        Class<?> observerType = addObserver.getParameterTypes()[0];
++        return Proxy.newProxyInstance(observerType.getClassLoader(), new Class<?>[]{observerType},
++                (proxy, method, args) -> {
++                    switch (method.getName()) {
++                        case "equals":
++                            return proxy == args[0];
++                        case "hashCode":
++                            return System.identityHashCode(proxy);
++                        case "toString":
++                            return "YandexVotPlayerTypeObserver";
++                    }
++                    if (args != null && args.length == 1 && (args[0] == null || args[0] instanceof PlayerType)) {
++                        callback.accept((PlayerType) args[0]);
++                    }
++                    // Function1.invoke returns Unit; Consumer.accept returns void.
++                    Class<?> returnType = method.getReturnType();
++                    if (returnType == void.class) return null;
++                    try {
++                        return Class.forName("kotlin.Unit").getField("INSTANCE").get(null);
++                    } catch (Exception ignored) {
++                        return null;
++                    }
++                });
++    }
++
++    private static void callPlayerTypeEvent(String name, Object observer) {
++        if (observer == null) return;
++        try {
++            Method method = findPlayerTypeEventMethod(name);
++            if (method != null) method.invoke(PlayerType.getOnChange(), observer);
++        } catch (Exception ex) {
++            Logger.printException(() -> "PlayerType observer " + name + " failure", ex);
++        }
++    }
+ }
