@@ -245,8 +245,7 @@ jobs:
             local id=$1 label=$2 safe=$3 pkg=$4 clone=$5 theme=$6
             local opts="$RUNNER_TEMP/options-$id.json"
             local base="YouTube_Morphe-v${YT_VERSION}-p${PATCHES_VER}"
-            # GitHub replaces spaces in asset names, so the file name is safe
-            # and the exact 4PDA-style name is shown as the asset label
+            # The asset label is the file name, so the release page shows the name of the downloaded file
             local out="$RUNNER_TEMP/out/${base}_${safe}.apk"
             echo "${base}_${label}.apk" > "$out.label"
             local icon="$ICON" header="$HEADER"
@@ -349,7 +348,7 @@ jobs:
           }
 
           # Original: dark #0F0F0F (YouTube default), light #F0F0F0, text in the color of the other theme
-          build_variant hiby   "Original_Mod_BBK Clone" "Original_Mod_BBK_Clone" \
+          build_variant hiby   "Original_Mod_BBK_Clone" "Original_Mod_BBK_Clone" \
             com.hiby.music true \
             '{"darkDefault":"APP_DEFAULT","lightDefault":"CUSTOM","lightCustomDefault":"#F0F0F0","changeForegroundDefault":true}'
           # Amoled: black #000000 / white #FFFFFF (Morphe defaults)
