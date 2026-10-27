@@ -95,8 +95,9 @@ jobs:
         run: |
           # YouTube part of the Morphe changelog: a stable version lists its own section,
           # a dev version its own and the two previous dev sections (newest first)
+          # Grouped by type, with the features of the mod after the new features (release notes only)
           python3 -I scripts/changelog.py patches-src/CHANGELOG.md "$PATCHES_VER" \
-            "$RUNNER_TEMP/changes.md" "$RUNNER_TEMP/changes.txt"
+            "$RUNNER_TEMP/changes.md" "$RUNNER_TEMP/changes.txt" notes/mod-features.md
           cat "$RUNNER_TEMP/changes.txt"
 
       - name: Setup Gradle
@@ -239,7 +240,7 @@ jobs:
             local id=$1 label=$2 safe=$3 pkg=$4 clone=$5 theme=$6
             local opts="$RUNNER_TEMP/options-$id.json"
             local base="YouTube_Morphe-v${YT_VERSION}-p${PATCHES_VER}"
-            # GitHub replaces [ ] ( ) + in asset names, so the file name is safe
+            # GitHub replaces spaces in asset names, so the file name is safe
             # and the exact 4PDA-style name is shown as the asset label
             local out="$RUNNER_TEMP/out/${base}_${safe}.apk"
             echo "${base}_${label}.apk" > "$out.label"
@@ -343,13 +344,13 @@ jobs:
           }
 
           # Original: dark #0F0F0F (YouTube default), light #F0F0F0, text in the color of the other theme
-          build_variant hiby   "[Original+]_Mod_(BBK Clone)" "Original_Mod_BBK_Clone" \
+          build_variant hiby   "Original_Mod_BBK Clone" "Original_Mod_BBK_Clone" \
             com.hiby.music true \
             '{"darkDefault":"APP_DEFAULT","lightDefault":"CUSTOM","lightCustomDefault":"#F0F0F0","changeForegroundDefault":true}'
           # Amoled: black #000000 / white #FFFFFF (Morphe defaults)
           # Test builds (not published): only the clone variant, which is the one tested
           if [ "${{ inputs.publish }}" != "false" ] && [ -z "${{ inputs.patches_source }}" ]; then
-          build_variant morphe "[Amoled+]_Mod"               "Amoled_Mod" \
+          build_variant morphe "Amoled_Mod"             "Amoled_Mod" \
             app.morphe.android.youtube false \
             '{}'
           fi
@@ -370,10 +371,13 @@ jobs:
           {
             cat "$RUNNER_TEMP/changes.md"
             echo
-            echo "| File | Package |"
-            echo "|---|---|"
-            echo "| \`$MORPHE\` | \`app.morphe.android.youtube\` |"
-            echo "| \`$HIBY\` | \`com.hiby.music\` |"
+            echo
+            echo "### 📦 Files"
+            echo
+            echo "| File | Package | |"
+            echo "|---|---|---|"
+            echo "| \`$MORPHE\` | \`app.morphe.android.youtube\` | Material You and themes: *Morphe settings → General* |"
+            echo "| \`$HIBY\` | \`com.hiby.music\` | Material You and themes + BBK Dynamic Island (China ROMs: vivo, iQOO, OPPO, OnePlus) |"
           } > "$RUNNER_TEMP/notes.md"
           FILES=()
           for f in "$RUNNER_TEMP"/out/*.apk; do FILES+=("$f#$(cat "$f.label")"); done

@@ -3,15 +3,39 @@
 Builds the YouTube part of the Morphe patches changelog for a patches version.
 
 Stable version: its own section (it already lists everything since the previous stable).
-Dev version: the last three dev sections (itself included) since the previous stable version, newest first.
+Dev version: the last three dev sections (itself included) since the previous stable version.
 
-Usage: changelog.py CHANGELOG.md VERSION OUT_MARKDOWN OUT_TEXT
+The changes are grouped by type (new features, bug fixes, improvements),
+and each group lists the versions newest first:
+
+    ### ✨ New Features
+    #### 1.49.0-dev.8
+    * ...
+    ### 🌟 Mod Features        (Markdown only, from MOD_FEATURES)
+    * ...
+    ### 🐛 Bug Fixes
+    #### 1.49.0-dev.8
+    * ...
+
+The Markdown file is the release notes, the text file is the changelog of the in-app update dialog.
+
+Usage: changelog.py CHANGELOG.md VERSION OUT_MARKDOWN OUT_TEXT [MOD_FEATURES.md]
 """
 import re
 import sys
 
 SECTION = re.compile(r"^##\s+\[([^\]]+)\]")
 EXCLUDED_SCOPES = ("reddit", "music")
+SKIPPED_GROUPS = ("app support",)
+DEV_SECTIONS = 3  # Dev changelogs: the version itself and the two before it.
+
+# Change types in the order they are shown. Older changelogs have titles without emoji.
+GROUPS = (
+    ("feature", "✨ New Features"),
+    ("fix", "🐛 Bug Fixes"),
+    ("improvement", "🔧 Improvements"),
+)
+MOD_FEATURES_TITLE = "🌟 Mod Features"
 
 
 def clean(text):
@@ -19,7 +43,7 @@ def clean(text):
     text = re.sub(r"\s*\(\[#\d+\]\([^)]*\)\)", "", text)                  # (#PR)
     text = re.sub(r",?\s*closes\s+.*$", "", text, flags=re.I)              # closes #123
     text = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text)                   # [text](url)
-    return text.strip()
+    return re.sub(r"\s{2,}", " ", text).strip()
 
 
 def strip_app(item):
@@ -36,33 +60,29 @@ def relevant(item):
     return not any(word in scope for word in EXCLUDED_SCOPES)
 
 
+def group_index(title):
+    title = title.lower()
+    return next((i for i, (word, _) in enumerate(GROUPS) if word in title), len(GROUPS) - 1)
+
+
 def parse(path):
-    sections, current = [], None
+    """[{version, groups: {group index: [items]}}], newest first."""
+    sections, current, group = [], None, None
     for line in open(path, encoding="utf-8"):
         line = line.rstrip("\n")
         m = SECTION.match(line)
         if m:
-            current = {"version": m.group(1), "groups": []}
+            current = {"version": m.group(1), "groups": {}}
             sections.append(current)
+            group = None
         elif current is not None and line.startswith("### "):
             title = line[4:].strip()
-            skipped = any(word in title.lower() for word in SKIPPED_GROUPS)
-            current["groups"].append({"title": title, "items": [], "skipped": skipped})
-        elif current is not None and line.startswith("* ") and current["groups"]:
+            group = None if any(word in title.lower() for word in SKIPPED_GROUPS) else group_index(title)
+        elif current is not None and group is not None and line.startswith("* "):
             item = clean(line[2:])
-            if relevant(item) and not current["groups"][-1]["skipped"]:
-                current["groups"][-1]["items"].append(strip_app(item))
+            if relevant(item):
+                current["groups"].setdefault(group, []).append(strip_app(item))
     return sections
-
-
-GROUP_ORDER = ("feature", "fix")
-DEV_SECTIONS = 3  # Dev changelogs: the version itself and the two before it.
-SKIPPED_GROUPS = ("app support",)
-
-
-def group_rank(title):
-    title = title.lower()
-    return next((i for i, word in enumerate(GROUP_ORDER) if word in title), len(GROUP_ORDER))
 
 
 def select(sections, version):
@@ -75,31 +95,48 @@ def select(sections, version):
     for section in sections[index:]:
         if "-dev" not in section["version"]:
             break
-        selected.append(section)
-    return selected
+        if section["groups"]:
+            selected.append(section)
+    return selected[:DEV_SECTIONS]
+
+
+def read_mod_features(path):
+    items = []
+    for line in open(path, encoding="utf-8"):
+        line = line.strip()
+        if line.startswith(("* ", "- ")):
+            items.append(line[2:].strip())
+    return items
+
+
+def plain(item):
+    return item.replace("**", "").replace("`", "")
 
 
 def main():
     path, version, out_md, out_txt = sys.argv[1:5]
-    selected = [s for s in select(parse(path), version.lstrip("v"))
-                if any(g["items"] for g in s["groups"])][:DEV_SECTIONS]
-    many = len(selected) > 1
+    mod_features = read_mod_features(sys.argv[5]) if len(sys.argv) > 5 else []
+    selected = select(parse(path), version.lstrip("v"))
 
     md, txt = [], []
-    for section in selected:
-        if many:
-            md.append(f"### {section['version']}\n")
-            txt.append(section["version"])
-        # New features first, then bug fixes, then app support.
-        for group in sorted(section["groups"], key=lambda g: group_rank(g["title"])):
-            if not group["items"]:
-                continue
-            md.append(f"{'####' if many else '###'} {group['title']}\n")
-            md.extend(f"* {item}" for item in group["items"])
+    for index, (_, title) in enumerate(GROUPS):
+        versions = [(s["version"], s["groups"][index]) for s in selected if index in s["groups"]]
+        if versions:
+            md.append(f"### {title}\n")
+            txt.append(title)
+            for name, items in versions:
+                md.append(f"#### {name}\n")
+                md.extend(f"* {item}" for item in items)
+                md.append("")
+                txt.append(f"  {name}")
+                txt.extend(f"  • {plain(item)}" for item in items)
+                txt.append("")
+        # The features of the mod follow the new features of Morphe.
+        if index == 0 and mod_features:
+            md.append(f"### {MOD_FEATURES_TITLE}\n")
+            md.extend(f"* {item}" for item in mod_features)
             md.append("")
-            txt.append(group["title"])
-            txt.extend("• " + item.replace("**", "").replace("`", "") for item in group["items"])
-            txt.append("")
+
     open(out_md, "w", encoding="utf-8").write("\n".join(md).strip() + "\n")
     open(out_txt, "w", encoding="utf-8").write("\n".join(txt).strip() + "\n")
 
