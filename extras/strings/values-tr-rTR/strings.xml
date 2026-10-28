@@ -8,6 +8,7 @@
     <string name="morphe_update_dialog_version">YouTube Morphe v%1$s p%2$s</string>
     <string name="morphe_update_dialog_download">İndir</string>
     <string name="morphe_update_dialog_skip">Bu sürümü atla</string>
+    <string name="morphe_update_dialog_later">Daha sonra</string>
     <string name="morphe_update_latest">En son sürümü kullanıyorsunuz</string>
     <string name="morphe_update_failed">Güncellemeler denetlenemedi</string>
 

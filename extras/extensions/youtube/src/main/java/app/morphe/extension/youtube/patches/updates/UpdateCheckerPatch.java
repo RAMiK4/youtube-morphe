@@ -5,12 +5,18 @@ import static app.morphe.extension.shared.StringRef.str;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.res.Resources;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.net.Uri;
+import android.util.TypedValue;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
+import android.text.style.LeadingMarginSpan;
 import android.text.style.LineBackgroundSpan;
 import android.text.style.RelativeSizeSpan;
 import android.text.style.StyleSpan;
@@ -204,7 +210,25 @@ public final class UpdateCheckerPatch {
                 true                                     // Dismiss on neutral click.
         );
 
+        // The Cancel button uses the system language; the dialog itself uses the app language.
+        final String later = str("morphe_update_dialog_later");
+        final String ok = str("morphe_update_dialog_download");
+        final String skip = str("morphe_update_dialog_skip");
+        forEachButton(dialogPair.second, button -> {
+            final String text = String.valueOf(button.getText());
+            if (!text.equals(ok) && !text.equals(skip)) button.setText(later);
+        });
+
         Utils.showDialog(activity, dialogPair.first);
+    }
+
+    private static void forEachButton(View view, java.util.function.Consumer<Button> action) {
+        if (view instanceof Button) {
+            action.accept((Button) view);
+        } else if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) forEachButton(group.getChildAt(i), action);
+        }
     }
 
     /**
@@ -214,6 +238,11 @@ public final class UpdateCheckerPatch {
     private static CharSequence styledChangelog(String version, String changelog) {
         SpannableStringBuilder text = new SpannableStringBuilder(version);
         final int ruleColor = (ThemeUtils.getAppForegroundColor() & 0x00FFFFFF) | 0x33000000;
+        // Wrapped lines of an item start under its text, not under the bullet.
+        Paint bulletPaint = new Paint();
+        bulletPaint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 16,
+                Resources.getSystem().getDisplayMetrics()));
+        final int bulletIndent = Math.round(bulletPaint.measureText("\u2022 "));
         for (String line : changelog.split("\n")) {
             line = line.trim();
             if (line.isEmpty() || line.chars().allMatch(c -> c == '\u2500')) continue;
@@ -222,7 +251,10 @@ public final class UpdateCheckerPatch {
             text.append(heading ? "\n\n" : "\n");
             final int start = text.length();
             text.append(line);
-            if (heading) {
+            if (!heading) {
+                text.setSpan(new LeadingMarginSpan.Standard(0, bulletIndent), start, text.length(),
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            } else {
                 final int end = text.length();
                 text.setSpan(new StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 text.setSpan(new RelativeSizeSpan(1.15f), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);

@@ -8,6 +8,7 @@
     <string name="morphe_update_dialog_version">YouTube Morphe v%1$s p%2$s</string>
     <string name="morphe_update_dialog_download">Download</string>
     <string name="morphe_update_dialog_skip">Skip this version</string>
+    <string name="morphe_update_dialog_later">Later</string>
     <string name="morphe_update_latest">You have the latest version</string>
     <string name="morphe_update_failed">Could not check for updates</string>
 

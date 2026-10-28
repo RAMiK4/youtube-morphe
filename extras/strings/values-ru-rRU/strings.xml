@@ -8,6 +8,7 @@
     <string name="morphe_update_dialog_version">YouTube Morphe v%1$s p%2$s</string>
     <string name="morphe_update_dialog_download">Скачать</string>
     <string name="morphe_update_dialog_skip">Пропустить версию</string>
+    <string name="morphe_update_dialog_later">Позже</string>
     <string name="morphe_update_latest">Установлена последняя версия</string>
     <string name="morphe_update_failed">Не удалось проверить обновления</string>
 
