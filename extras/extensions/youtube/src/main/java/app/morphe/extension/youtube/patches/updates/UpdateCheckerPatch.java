@@ -14,6 +14,7 @@ import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.style.LeadingMarginSpan;
@@ -212,14 +213,48 @@ public final class UpdateCheckerPatch {
 
         // The Cancel button uses the system language; the dialog itself uses the app language.
         final String later = str("morphe_update_dialog_later");
-        final String ok = str("morphe_update_dialog_download");
-        final String skip = str("morphe_update_dialog_skip");
+        final String okText = str("morphe_update_dialog_download");
+        final String skipText = str("morphe_update_dialog_skip");
+        final Button[] buttons = new Button[3]; // Download, Later, Skip.
         forEachButton(dialogPair.second, button -> {
             final String text = String.valueOf(button.getText());
-            if (!text.equals(ok) && !text.equals(skip)) button.setText(later);
+            if (text.equals(okText)) buttons[0] = button;
+            else if (text.equals(skipText)) buttons[2] = button;
+            else {
+                button.setText(later);
+                buttons[1] = button;
+            }
         });
+        stackButtons(activity, buttons);
 
         Utils.showDialog(activity, dialogPair.first);
+    }
+
+    /**
+     * Shows the buttons as full width rows in every language (Download, Later, Skip),
+     * as the dialog already does when they do not fit in one row.
+     */
+    private static void stackButtons(Activity activity, Button[] buttons) {
+        try {
+            for (Button button : buttons) if (button == null) return;
+            ViewGroup row = (ViewGroup) buttons[0].getParent();
+            ViewGroup container = (ViewGroup) row.getParent();
+            container.removeAllViews();
+            for (int i = 0; i < buttons.length; i++) {
+                ((ViewGroup) buttons[i].getParent()).removeView(buttons[i]);
+                buttons[i].setLayoutParams(new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, Dim.dp(36)));
+                if (i > 0) {
+                    View spacer = new View(activity);
+                    spacer.setLayoutParams(new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT, Dim.dp(8)));
+                    container.addView(spacer);
+                }
+                container.addView(buttons[i]);
+            }
+        } catch (Exception ex) {
+            Logger.printException(() -> "Could not stack the update dialog buttons", ex);
+        }
     }
 
     private static void forEachButton(View view, java.util.function.Consumer<Button> action) {
