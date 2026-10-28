@@ -6,23 +6,17 @@ Stable version: its own section (it already lists everything since the previous 
 Dev version: new features of the last two dev sections (itself included),
 bug fixes and improvements of the version itself only.
 
-Each group title stands between two separator lines, followed by its changes, without version headings:
+Each group is a title followed by its changes, without version headings:
 
-    ────────────────
     ✨ New Features
-    ────────────────
     • ...
-    ────────────────
     🌟 Mod Features     (from MOD_FEATURES)
-    ────────────────
     • ...
-    ────────────────
     🐛 Bug Fixes
-    ────────────────
     • ...              (Morphe fixes, then the fixes of the mod from MOD_FIXES)
 
-The release notes use "## <title>" headings instead (GitHub draws a thin rule under them),
-and add the files table after them under the same kind of heading.
+The in-app dialog shows the titles bold with a thin rule under them. The release notes
+use "## <title>" headings (GitHub draws the same kind of rule) and add the files table.
 
 Newer versions come first; within a version the newest change is listed first, by the date of its commit
 (DATES: lines of "<commit hash> <unix time>", from git log). Without dates the order of Morphe is kept.
@@ -41,7 +35,6 @@ COMMIT = re.compile(r"\(\[([0-9a-f]{7,40})\]\(")
 EXCLUDED_SCOPES = ("reddit", "music")
 SKIPPED_GROUPS = ("app support",)
 DEV_FEATURE_SECTIONS = 2  # Dev changelogs: new features of the version itself and the one before it.
-SEPARATOR = "─" * 16
 
 # Change types in the order they are shown. Older changelogs have titles without emoji.
 GROUPS = (
@@ -200,8 +193,10 @@ def main():
         md += [f"## {title}", ""]
         md += [f"* {item}" for item in items]
         md.append("")
-        txt += [SEPARATOR, title, SEPARATOR]
+        # The app draws a thin rule under each title.
+        txt += [title]
         txt += [f"• {plain(item)}" for item in items]
+        txt.append("")
 
     open(args.out_md, "w", encoding="utf-8").write("\n".join(md).strip() + "\n")
     open(args.out_txt, "w", encoding="utf-8").write("\n".join(txt).strip() + "\n")

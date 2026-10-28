@@ -21,6 +21,11 @@ on:
         required: false
         default: true
         type: boolean
+      update_preview:
+        description: "Test only: the build offers the latest release, to preview the update dialog"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -270,6 +275,12 @@ jobs:
           mkdir -p "$RUNNER_TEMP/out"
           echo "BUILD=$BUILD" >> "$GITHUB_ENV"
           echo "TAG=$TAG" >> "$GITHUB_ENV"
+          # Build number the update check compares with the published one
+          CHECK_BUILD=$BUILD
+          if [ "${{ inputs.update_preview }}" = "true" ]; then
+            [ "${{ inputs.publish }}" != "true" ] || { echo "::error::Update preview is for test builds only. Uncheck 'Publish the release'."; exit 1; }
+            CHECK_BUILD=1
+          fi
 
           # One branding/ folder: mipmap-* (icon), drawable-* (header logo + notification icon)
           ICON=""; HEADER=""
@@ -291,7 +302,7 @@ jobs:
                --argjson clone "$clone" --arg pkg "$pkg" \
                --argjson theme "$theme" \
                --arg updurl "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/main/updates/$id.json" \
-               --arg build "$BUILD" \
+               --arg build "$CHECK_BUILD" \
                --arg verinfo "v$YT_VERSION p$PATCHES_VER · Build $BUILD" \
                --arg defaults "$(jq -c . settings/defaults.json)" \
                --arg name "$APP_NAME" --arg icon "$icon" --arg header "$header" '

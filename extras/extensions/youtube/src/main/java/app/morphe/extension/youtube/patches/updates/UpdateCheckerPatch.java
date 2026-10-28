@@ -5,7 +5,15 @@ import static app.morphe.extension.shared.StringRef.str;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.Typeface;
 import android.net.Uri;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.LineBackgroundSpan;
+import android.text.style.RelativeSizeSpan;
+import android.text.style.StyleSpan;
 
 import org.json.JSONObject;
 
@@ -19,7 +27,9 @@ import app.morphe.extension.shared.Logger;
 import app.morphe.extension.shared.Utils;
 import app.morphe.extension.shared.settings.BooleanSetting;
 import app.morphe.extension.shared.settings.LongSetting;
+import app.morphe.extension.shared.theme.ThemeUtils;
 import app.morphe.extension.shared.ui.CustomDialog;
+import app.morphe.extension.shared.ui.Dim;
 
 /**
  * Checks a JSON file published with every release and offers the newer build.
@@ -179,7 +189,7 @@ public final class UpdateCheckerPatch {
         final String version = str("morphe_update_dialog_version",
                 json.optString("yt_version"), json.optString("patches"));
         final String changelog = localizedChangelog(activity, json).trim();
-        final String message = changelog.isEmpty() ? version : version + "\n\n" + changelog;
+        final CharSequence message = changelog.isEmpty() ? version : styledChangelog(version, changelog);
 
         var dialogPair = CustomDialog.create(
                 activity,
@@ -195,6 +205,58 @@ public final class UpdateCheckerPatch {
         );
 
         Utils.showDialog(activity, dialogPair.first);
+    }
+
+    /**
+     * Section titles of the changelog are bold with a thin, faint rule under them, like the
+     * headings of the release notes on GitHub. Separator lines of older changelogs are dropped.
+     */
+    private static CharSequence styledChangelog(String version, String changelog) {
+        SpannableStringBuilder text = new SpannableStringBuilder(version);
+        final int ruleColor = (ThemeUtils.getAppForegroundColor() & 0x00FFFFFF) | 0x33000000;
+        for (String line : changelog.split("\n")) {
+            line = line.trim();
+            if (line.isEmpty() || line.chars().allMatch(c -> c == '\u2500')) continue;
+            final boolean heading = !line.startsWith("\u2022");
+            // A blank line before every section, a short gap between a rule and its items.
+            text.append(heading ? "\n\n" : "\n");
+            final int start = text.length();
+            text.append(line);
+            if (heading) {
+                final int end = text.length();
+                text.setSpan(new StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                text.setSpan(new RelativeSizeSpan(1.15f), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                text.setSpan(new RuleSpan(ruleColor), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                final int gap = text.length();
+                text.append("\n ");
+                text.setSpan(new RelativeSizeSpan(0.4f), gap, text.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+        }
+        return text;
+    }
+
+    /** Draws a thin line along the bottom of a heading line, across the full width. */
+    private static final class RuleSpan implements LineBackgroundSpan {
+        private final int color;
+
+        RuleSpan(int color) {
+            this.color = color;
+        }
+
+        @Override
+        public void drawBackground(Canvas canvas, Paint paint, int left, int right, int top,
+                                   int baseline, int bottom, CharSequence text, int start, int end,
+                                   int lineNumber) {
+            final int oldColor = paint.getColor();
+            final Paint.Style oldStyle = paint.getStyle();
+            paint.setColor(color);
+            paint.setStyle(Paint.Style.FILL);
+            final float height = Math.max(1, Dim.dp(1));
+            final float y = bottom - height;
+            canvas.drawRect(left, y, right, bottom, paint);
+            paint.setColor(oldColor);
+            paint.setStyle(oldStyle);
+        }
     }
 
     /**
