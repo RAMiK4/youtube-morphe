@@ -17,8 +17,10 @@ import android.app.Activity;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.Color;
+import android.graphics.drawable.ClipDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.LayerDrawable;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -37,7 +39,6 @@ import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
-import android.widget.PopupMenu;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
@@ -48,6 +49,7 @@ import app.morphe.extension.shared.Utils;
 import app.morphe.extension.shared.ui.Dim;
 import app.morphe.extension.shared.ResourceUtils;
 import app.morphe.extension.shared.ResourceType;
+import app.morphe.extension.youtube.patches.theme.SeekbarColorPatch;
 
 /**
  * Video screen of the offline player. The player itself is {@link OfflinePlayer}; this screen
@@ -147,14 +149,14 @@ final class OfflinePlayerScreen implements OfflineScreens.Screen, OfflinePlayer.
         LinearLayout top = new LinearLayout(activity);
         top.setOrientation(LinearLayout.HORIZONTAL);
         top.setGravity(Gravity.CENTER_VERTICAL);
-        ImageButton back = button(android.R.drawable.ic_menu_revert, str("morphe_settings_navigate_up"));
+        ImageButton back = button("back", str("morphe_settings_navigate_up"));
         back.setOnClickListener(v -> activity.finish());
         top.addView(back);
         title = text(16, Color.WHITE);
         title.setMaxLines(1);
         title.setEllipsize(android.text.TextUtils.TruncateAt.END);
         top.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        speedButton = button(android.R.drawable.ic_menu_manage, str("morphe_offline_player_speed"));
+        speedButton = button("speed", str("morphe_offline_player_speed"));
         speedButton.setOnClickListener(this::showSpeedMenu);
         top.addView(speedButton);
         overlay.addView(top, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
@@ -163,19 +165,19 @@ final class OfflinePlayerScreen implements OfflineScreens.Screen, OfflinePlayer.
         LinearLayout center = new LinearLayout(activity);
         center.setOrientation(LinearLayout.HORIZONTAL);
         center.setGravity(Gravity.CENTER);
-        previous = button(android.R.drawable.ic_media_previous, str("morphe_offline_previous"));
+        previous = button("previous", str("morphe_offline_previous"));
         previous.setOnClickListener(v -> {
             OfflinePlayer.skip(-1);
             scheduleHide();
         });
-        playPause = button(android.R.drawable.ic_media_pause, str("morphe_offline_pause"));
+        playPause = button("pause", str("morphe_offline_pause"));
         playPause.setScaleX(1.5f);
         playPause.setScaleY(1.5f);
         playPause.setOnClickListener(v -> {
             OfflinePlayer.togglePlayPause();
             scheduleHide();
         });
-        next = button(android.R.drawable.ic_media_next, str("morphe_offline_next"));
+        next = button("next", str("morphe_offline_next"));
         next.setOnClickListener(v -> {
             OfflinePlayer.skip(1);
             scheduleHide();
@@ -197,6 +199,7 @@ final class OfflinePlayerScreen implements OfflineScreens.Screen, OfflinePlayer.
         position = text(13, Color.WHITE);
         bottom.addView(position);
         seekBar = new SeekBar(activity);
+        styleSeekBar(seekBar);
         seekBar.setMax(1000);
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -222,7 +225,7 @@ final class OfflinePlayerScreen implements OfflineScreens.Screen, OfflinePlayer.
         bottom.addView(seekBar, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         duration = text(13, Color.WHITE);
         bottom.addView(duration);
-        fullscreenButton = button(android.R.drawable.ic_menu_always_landscape_portrait,
+        fullscreenButton = button("rotate",
                 str("morphe_offline_player_fullscreen"));
         fullscreenButton.setOnClickListener(v -> toggleFullscreen());
         bottom.addView(fullscreenButton);
@@ -297,7 +300,7 @@ final class OfflinePlayerScreen implements OfflineScreens.Screen, OfflinePlayer.
         return view;
     }
 
-    private ImageButton button(int icon, String description) {
+    private ImageButton button(String icon, String description) {
         ImageButton button = new ImageButton(activity);
         setIcon(button, icon);
         button.setBackgroundColor(Color.TRANSPARENT);
@@ -308,13 +311,36 @@ final class OfflinePlayerScreen implements OfflineScreens.Screen, OfflinePlayer.
         return button;
     }
 
-    private void setIcon(ImageButton button, int icon) {
-        Drawable drawable = activity.getDrawable(icon);
-        if (drawable != null) {
-            drawable = drawable.mutate();
-            drawable.setTint(Color.WHITE);
+    private void setIcon(ImageButton button, String icon) {
+        button.setImageDrawable(OfflineUi.icon(activity, icon, Color.WHITE));
+    }
+
+    /** Draws the seekbar like YouTube's: a thin track, the progress and a dot in the seekbar color. */
+    private void styleSeekBar(SeekBar bar) {
+        final int accent = SeekbarColorPatch.getSeekbarColor();
+        final int trackHeight = Dim.dp(3);
+        final float radius = trackHeight / 2f;
+        GradientDrawable track = new GradientDrawable();
+        track.setColor(0x4DFFFFFF);
+        track.setCornerRadius(radius);
+        GradientDrawable progress = new GradientDrawable();
+        progress.setColor(accent);
+        progress.setCornerRadius(radius);
+        LayerDrawable layers = new LayerDrawable(new Drawable[]{
+                track, new ClipDrawable(progress, Gravity.START, ClipDrawable.HORIZONTAL)});
+        layers.setId(0, android.R.id.background);
+        layers.setId(1, android.R.id.progress);
+        for (int i = 0; i < 2; i++) {
+            layers.setLayerHeight(i, trackHeight);
+            layers.setLayerGravity(i, Gravity.CENTER_VERTICAL | Gravity.FILL_HORIZONTAL);
         }
-        button.setImageDrawable(drawable);
+        bar.setProgressDrawable(layers);
+        GradientDrawable thumb = new GradientDrawable();
+        thumb.setShape(GradientDrawable.OVAL);
+        thumb.setColor(accent);
+        thumb.setSize(Dim.dp(14), Dim.dp(14));
+        bar.setThumb(thumb);
+        bar.setSplitTrack(false);
     }
 
     private void showSeekHint(String text) {
@@ -349,21 +375,19 @@ final class OfflinePlayerScreen implements OfflineScreens.Screen, OfflinePlayer.
     }
 
     private void showSpeedMenu(View anchor) {
-        PopupMenu menu = new PopupMenu(activity, anchor);
         final float current = OfflinePlayer.getSpeed();
+        String[] labels = new String[SPEEDS.length];
+        int selected = 0;
         for (int i = 0; i < SPEEDS.length; i++) {
-            final float speed = SPEEDS[i];
-            String label = (speed == 1f ? str("morphe_offline_player_speed_normal")
-                    : String.format(Locale.US, "%sx", trim(speed)));
-            menu.getMenu().add(0, i, i, label).setCheckable(true).setChecked(speed == current);
+            labels[i] = SPEEDS[i] == 1f ? str("morphe_offline_player_speed_normal")
+                    : String.format(Locale.US, "%sx", trim(SPEEDS[i]));
+            if (SPEEDS[i] == current) selected = i;
         }
-        menu.getMenu().setGroupCheckable(0, true, true);
-        menu.setOnMenuItemClickListener(item -> {
-            OfflinePlayer.setSpeed(SPEEDS[item.getItemId()]);
-            return true;
-        });
-        menu.show();
         handler.removeCallbacks(hideControls);
+        OfflineUi.showChoices(activity, null, labels, selected, Color.WHITE, which -> {
+            OfflinePlayer.setSpeed(SPEEDS[which]);
+            scheduleHide();
+        });
     }
 
     private static String trim(float value) {
@@ -454,7 +478,7 @@ final class OfflinePlayerScreen implements OfflineScreens.Screen, OfflinePlayer.
         }
         title.setText(video.title);
         final boolean playing = OfflinePlayer.isPlaying();
-        setIcon(playPause, playing ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play);
+        setIcon(playPause, playing ? "pause" : "play");
         playPause.setContentDescription(playing ? str("morphe_offline_pause") : str("morphe_offline_play"));
         previous.setAlpha(OfflinePlayer.hasPrevious() || OfflinePlayer.getPosition() > 3000 ? 1f : 0.4f);
         next.setEnabled(OfflinePlayer.hasNext());

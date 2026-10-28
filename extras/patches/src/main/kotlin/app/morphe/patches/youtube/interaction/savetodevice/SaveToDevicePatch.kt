@@ -17,6 +17,8 @@ import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
+import app.morphe.util.ResourceGroup
+import app.morphe.util.copyResources
 import app.morphe.patcher.util.getReference
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod.Companion.toMutable
@@ -64,6 +66,18 @@ private val saveToDeviceResourcePatch = resourcePatch {
     dependsOn(settingsPatch)
 
     execute {
+        // Icons of the offline library and player.
+        copyResources(
+            "savetodevice",
+            ResourceGroup(
+                "drawable",
+                *arrayOf(
+                    "back", "check", "close", "next", "pause", "play",
+                    "previous", "rotate", "search", "sort", "speed",
+                ).map { "morphe_offline_$it.xml" }.toTypedArray(),
+            ),
+        )
+
         PreferenceScreen.PLAYER.addPreferences(
             PreferenceScreenPreference(
                 key = "morphe_save_to_device_screen",
