@@ -20,7 +20,7 @@
     <string name="morphe_save_to_device_screen_title">Save to device</string>
     <string name="morphe_save_to_device_screen_summary">Download videos, audio and thumbnails as files with a quality picker, and watch them offline</string>
     <string name="morphe_save_to_device_title">Save to device</string>
-    <string name="morphe_save_to_device_summary_on">Download buttons save videos to Movies/Morphe/Video and audio to Music/Morphe/Audio with a quality picker. Used instead of the download mode</string>
+    <string name="morphe_save_to_device_summary_on">Download buttons save videos to Download/YouTube and audio to Download/YouTube/Audio with a quality picker. Used instead of the download mode</string>
     <string name="morphe_save_to_device_summary_off">Download buttons use the download mode</string>
     <string name="morphe_offline_replace_downloads_page_title">Replace Downloads page</string>
     <string name="morphe_offline_replace_downloads_page_summary_on">YouTube\'s Downloads page opens the saved videos</string>
@@ -113,11 +113,11 @@ Audio is saved to %2$s"</string>
     <string name="morphe_offline_min_height_title">Lowest quality</string>
     <string name="morphe_offline_max_height_title">Highest quality</string>
     <string name="morphe_offline_video_folder_title">Video folder</string>
-    <string name="morphe_offline_video_folder_summary">Folder inside Movies for downloaded videos</string>
+    <string name="morphe_offline_video_folder_summary">Folder inside Download for downloaded videos</string>
     <string name="morphe_offline_audio_folder_title">Audio folder</string>
-    <string name="morphe_offline_audio_folder_summary">Folder inside Music for downloaded audio</string>
+    <string name="morphe_offline_audio_folder_summary">Folder inside Download for downloaded audio</string>
     <string name="morphe_offline_thumbnail_folder_title">Thumbnail folder</string>
-    <string name="morphe_offline_thumbnail_folder_summary">Folder inside Pictures for saved thumbnails</string>
+    <string name="morphe_offline_thumbnail_folder_summary">Folder inside Download for saved thumbnails</string>
     <string name="morphe_offline_save_thumbnail_title">Save thumbnail with downloads</string>
     <string name="morphe_offline_save_thumbnail_summary_on">Every download also saves the thumbnail of the video to the thumbnail folder</string>
     <string name="morphe_offline_save_thumbnail_summary_off">Only the downloaded video or audio is saved</string>

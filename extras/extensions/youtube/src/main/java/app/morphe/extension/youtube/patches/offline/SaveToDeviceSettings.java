@@ -61,13 +61,13 @@ public final class SaveToDeviceSettings {
             new IntegerSetting("morphe_offline_max_height", 4320, parent(ENABLED));
 
     public static final StringSetting VIDEO_FOLDER =
-            new StringSetting("morphe_offline_video_folder", "Morphe/Video", parent(ENABLED));
+            new StringSetting("morphe_offline_video_folder", "YouTube", parent(ENABLED));
 
     public static final StringSetting AUDIO_FOLDER =
-            new StringSetting("morphe_offline_audio_folder", "Morphe/Audio", parent(ENABLED));
+            new StringSetting("morphe_offline_audio_folder", "YouTube/Audio", parent(ENABLED));
 
     public static final StringSetting THUMBNAIL_FOLDER =
-            new StringSetting("morphe_offline_thumbnail_folder", "Morphe/Thumbnails", parent(ENABLED));
+            new StringSetting("morphe_offline_thumbnail_folder", "YouTube/Thumbnails", parent(ENABLED));
 
     public static final BooleanSetting SAVE_THUMBNAIL =
             new BooleanSetting("morphe_offline_save_thumbnail", FALSE, parent(ENABLED));

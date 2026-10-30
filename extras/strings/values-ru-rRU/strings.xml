@@ -20,7 +20,7 @@
     <string name="morphe_save_to_device_screen_title">Сохранение на устройство</string>
     <string name="morphe_save_to_device_screen_summary">Скачивание видео, аудио и миниатюр файлами с выбором качества и просмотр без сети</string>
     <string name="morphe_save_to_device_title">Сохранять на устройство</string>
-    <string name="morphe_save_to_device_summary_on">Кнопки загрузки сохраняют видео в Movies/Morphe/Video, а аудио в Music/Morphe/Audio с выбором качества. Используется вместо режима загрузки</string>
+    <string name="morphe_save_to_device_summary_on">Кнопки загрузки сохраняют видео в Download/YouTube, а аудио в Download/YouTube/Audio с выбором качества. Используется вместо режима загрузки</string>
     <string name="morphe_save_to_device_summary_off">Кнопки загрузки используют режим загрузки</string>
     <string name="morphe_offline_replace_downloads_page_title">Заменить страницу «Скачанные»</string>
     <string name="morphe_offline_replace_downloads_page_summary_on">Страница «Скачанные» YouTube открывает сохранённые видео</string>
@@ -113,11 +113,11 @@
     <string name="morphe_offline_min_height_title">Минимальное качество</string>
     <string name="morphe_offline_max_height_title">Максимальное качество</string>
     <string name="morphe_offline_video_folder_title">Папка видео</string>
-    <string name="morphe_offline_video_folder_summary">Папка внутри Movies для загруженных видео</string>
+    <string name="morphe_offline_video_folder_summary">Папка внутри Download для загруженных видео</string>
     <string name="morphe_offline_audio_folder_title">Папка аудио</string>
-    <string name="morphe_offline_audio_folder_summary">Папка внутри Music для загруженного аудио</string>
+    <string name="morphe_offline_audio_folder_summary">Папка внутри Download для загруженного аудио</string>
     <string name="morphe_offline_thumbnail_folder_title">Папка миниатюр</string>
-    <string name="morphe_offline_thumbnail_folder_summary">Папка внутри Pictures для сохранённых миниатюр</string>
+    <string name="morphe_offline_thumbnail_folder_summary">Папка внутри Download для сохранённых миниатюр</string>
     <string name="morphe_offline_save_thumbnail_title">Сохранять миниатюру с загрузками</string>
     <string name="morphe_offline_save_thumbnail_summary_on">Каждая загрузка также сохраняет миниатюру видео в папку миниатюр</string>
     <string name="morphe_offline_save_thumbnail_summary_off">Сохраняется только загруженное видео или аудио</string>

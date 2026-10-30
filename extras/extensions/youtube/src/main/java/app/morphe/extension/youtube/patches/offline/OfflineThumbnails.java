@@ -26,7 +26,7 @@ import java.util.Locale;
 import app.morphe.extension.shared.Logger;
 
 /**
- * Saves the original thumbnail of a video to {@code Pictures}, in the thumbnail folder of the
+ * Saves the original thumbnail of a video below {@code Download}, in the thumbnail folder of the
  * settings. The image bytes are stored as YouTube serves them, without decoding or re-encoding.
  * Saved thumbnails are not library entries: the library lists what the player can play.
  */

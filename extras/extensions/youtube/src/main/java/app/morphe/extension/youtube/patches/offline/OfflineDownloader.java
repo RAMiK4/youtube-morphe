@@ -59,8 +59,8 @@ import app.morphe.extension.shared.Utils;
 
 /**
  * Built-in downloader: format picker, chunked parallel download of the DASH (and for the 1080p
- * Premium stream, HLS) streams, muxing, and saving videos to {@code Movies}, audio to {@code Music}
- * and thumbnails to {@code Pictures}. Downloads run one at a time, further downloads wait in a
+ * Premium stream, HLS) streams, muxing, and saving videos, audio and thumbnails to their folders
+ * below {@code Download}. Downloads run one at a time, further downloads wait in a
  * queue. The process is kept alive by the hooked {@code OfflineKeepAliveService}.
  */
 public final class OfflineDownloader {

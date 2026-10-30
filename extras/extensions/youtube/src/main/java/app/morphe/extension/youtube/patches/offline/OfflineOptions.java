@@ -111,17 +111,17 @@ final class OfflineOptions {
         return SaveToDeviceSettings.SAVE_THUMBNAIL.get();
     }
 
-    /** Below {@code Movies}. */
+    /** Below {@code Download}. */
     static String videoFolder() {
         return folder(SaveToDeviceSettings.VIDEO_FOLDER);
     }
 
-    /** Below {@code Music}. */
+    /** Below {@code Download}. */
     static String audioFolder() {
         return folder(SaveToDeviceSettings.AUDIO_FOLDER);
     }
 
-    /** Below {@code Pictures}. */
+    /** Below {@code Download}. */
     static String thumbnailFolder() {
         return folder(SaveToDeviceSettings.THUMBNAIL_FOLDER);
     }

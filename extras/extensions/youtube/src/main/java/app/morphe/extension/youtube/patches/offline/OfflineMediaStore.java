@@ -37,35 +37,29 @@ import java.util.Locale;
 import app.morphe.extension.shared.Logger;
 
 /**
- * Stores finished downloads: videos below {@code Movies}, audio below {@code Music} and thumbnails
- * below {@code Pictures}, each in the folder of its setting. Android 10+ uses MediaStore, which
- * needs no storage permission for files the app inserts itself. Older versions use the
- * app-specific directories of the same names, which need no permission either.
+ * Stores finished downloads below {@code Download}: videos, audio and thumbnails each in the folder
+ * of its setting. Android 10+ uses the Downloads collection of MediaStore, which takes files of every
+ * type and needs no storage permission for files the app inserts itself. Older versions use the
+ * app-specific directory of the same name, which needs no permission either.
  */
 @SuppressLint("NewApi")
 final class OfflineMediaStore {
-    /** The MediaStore collection of a download, and the top-level directory it must be in. */
+    /**
+     * The kind of a download. All of them are saved in the Downloads collection, so they share
+     * the top-level directory and only their folders differ.
+     */
     enum Collection {
-        VIDEO(Environment.DIRECTORY_MOVIES),
-        AUDIO(Environment.DIRECTORY_MUSIC),
-        IMAGE(Environment.DIRECTORY_PICTURES);
+        VIDEO,
+        AUDIO,
+        IMAGE;
 
-        final String directory;
-
-        Collection(String directory) {
-            this.directory = directory;
-        }
+        final String directory = Environment.DIRECTORY_DOWNLOADS;
 
         Uri contentUri() {
-            final String volume = MediaStore.VOLUME_EXTERNAL_PRIMARY;
-            return switch (this) {
-                case VIDEO -> MediaStore.Video.Media.getContentUri(volume);
-                case AUDIO -> MediaStore.Audio.Media.getContentUri(volume);
-                case IMAGE -> MediaStore.Images.Media.getContentUri(volume);
-            };
+            return MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
         }
 
-        /** The folder as the user sees it, e.g. {@code Movies/Morphe/Video}. */
+        /** The folder as the user sees it, e.g. {@code Download/YouTube/Audio}. */
         String relativePath(String folder) {
             return directory + "/" + folder;
         }

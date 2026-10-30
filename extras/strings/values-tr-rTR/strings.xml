@@ -20,7 +20,7 @@
     <string name="morphe_save_to_device_screen_title">Cihaza kaydet</string>
     <string name="morphe_save_to_device_screen_summary">Videoları, sesleri ve küçük resimleri kalite seçerek dosya olarak indirin ve çevrimdışı izleyin</string>
     <string name="morphe_save_to_device_title">Cihaza kaydet</string>
-    <string name="morphe_save_to_device_summary_on">İndirme butonları kalite seçerek videoları Movies/Morphe/Video, sesleri Music/Morphe/Audio klasörüne kaydeder. İndirme modu yerine kullanılır</string>
+    <string name="morphe_save_to_device_summary_on">İndirme butonları kalite seçerek videoları Download/YouTube, sesleri Download/YouTube/Audio klasörüne kaydeder. İndirme modu yerine kullanılır</string>
     <string name="morphe_save_to_device_summary_off">İndirme butonları indirme modunu kullanır</string>
     <string name="morphe_offline_replace_downloads_page_title">İndirilenler sayfasını değiştir</string>
     <string name="morphe_offline_replace_downloads_page_summary_on">YouTube\'un İndirilenler sayfası kaydedilen videoları açar</string>
@@ -113,11 +113,11 @@ Sesler %2$s klasörüne kaydedilir"</string>
     <string name="morphe_offline_min_height_title">En düşük kalite</string>
     <string name="morphe_offline_max_height_title">En yüksek kalite</string>
     <string name="morphe_offline_video_folder_title">Video klasörü</string>
-    <string name="morphe_offline_video_folder_summary">İndirilen videolar için Movies içindeki klasör</string>
+    <string name="morphe_offline_video_folder_summary">İndirilen videolar için Download içindeki klasör</string>
     <string name="morphe_offline_audio_folder_title">Ses klasörü</string>
-    <string name="morphe_offline_audio_folder_summary">İndirilen sesler için Music içindeki klasör</string>
+    <string name="morphe_offline_audio_folder_summary">İndirilen sesler için Download içindeki klasör</string>
     <string name="morphe_offline_thumbnail_folder_title">Küçük resim klasörü</string>
-    <string name="morphe_offline_thumbnail_folder_summary">Kaydedilen küçük resimler için Pictures içindeki klasör</string>
+    <string name="morphe_offline_thumbnail_folder_summary">Kaydedilen küçük resimler için Download içindeki klasör</string>
     <string name="morphe_offline_save_thumbnail_title">İndirmelerle küçük resmi kaydet</string>
     <string name="morphe_offline_save_thumbnail_summary_on">Her indirme, videonun küçük resmini de küçük resim klasörüne kaydeder</string>
     <string name="morphe_offline_save_thumbnail_summary_off">Yalnızca indirilen video veya ses kaydedilir</string>
