@@ -35,6 +35,8 @@ message DownloadThumbnail {
 
 message DownloadStreamingData {
   repeated DownloadFormat adaptiveFormats = 3;
+  // The 1080p Premium (itag 616) HLS stream is read from it.
+  optional string hlsManifestUrl = 5;
 }
 
 message DownloadFormat {

@@ -43,13 +43,14 @@ import app.morphe.extension.shared.Utils;
 public final class OfflineScreens {
     public static final String LIBRARY_INTENT = "morphe_offline_library_intent";
     public static final String PLAYER_INTENT = "morphe_offline_player_intent";
+    /** {@link OfflineVideo#key()} of a library entry, or {@link OfflineDownloader.Task#key} of a download. */
     static final String EXTRA_VIDEO_ID = "morphe_offline_video_id";
 
     private static final String HOST_ACTIVITY = "com.google.android.gms.common.api.GoogleApiActivity";
     private static final String DOWNLOADS_BROWSE_ID = "FEdownloads";
     private static final byte[] DOWNLOADS_BROWSE_ID_BYTES = DOWNLOADS_BROWSE_ID.getBytes(StandardCharsets.UTF_8);
 
-    // field numbers of the commands in YouTube's innertube
+    // Field numbers of the commands in YouTube's innertube
     // protocol. browseEndpoint carries the browse id as field 1; the Downloads page endpoint is the
     // command of the "Downloads" row in the You tab's library list.
     private static final int BROWSE_ENDPOINT_FIELD = 48687626;
@@ -95,9 +96,9 @@ public final class OfflineScreens {
         return hostIntent(context, LIBRARY_INTENT);
     }
 
-    static Intent playerIntent(Context context, @Nullable String videoId) {
+    static Intent playerIntent(Context context, @Nullable String key) {
         Intent intent = hostIntent(context, PLAYER_INTENT);
-        if (videoId != null) intent.putExtra(EXTRA_VIDEO_ID, videoId);
+        if (key != null) intent.putExtra(EXTRA_VIDEO_ID, key);
         return intent;
     }
 
@@ -124,9 +125,9 @@ public final class OfflineScreens {
         start(context, libraryIntent(base));
     }
 
-    static void openPlayer(@Nullable Context context, @Nullable String videoId) {
+    static void openPlayer(@Nullable Context context, @Nullable String key) {
         Context base = context != null ? context : Utils.getContext();
-        start(context, playerIntent(base, videoId));
+        start(context, playerIntent(base, key));
     }
 
     // endregion
@@ -216,7 +217,7 @@ public final class OfflineScreens {
         return DOWNLOADS_BROWSE_ID.equals(browseId) && openLibraryInsteadOfDownloadsPage();
     }
 
-    // the You tab library row opens the Downloads page with a
+    // The You tab library row opens the Downloads page with a
     // dedicated endpoint, which never reaches the browse-endpoint handler. Every command is checked
     // where YouTube resolves it, so each entry to the Downloads page is replaced.
     /**
@@ -380,9 +381,9 @@ public final class OfflineScreens {
     }
 
     static List<String> order() {
-        List<String> ids = new ArrayList<>();
-        for (OfflineVideo video : sorted(OfflineIndex.getAll())) ids.add(video.videoId);
-        return ids;
+        List<String> keys = new ArrayList<>();
+        for (OfflineVideo video : sorted(OfflineIndex.getAll())) keys.add(video.key());
+        return keys;
     }
 
     // endregion

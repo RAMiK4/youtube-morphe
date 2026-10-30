@@ -42,6 +42,7 @@ final class OfflineNotifications {
     static final int PLAYBACK_ID = 0x52565802;
 
     private static final int FLAGS = PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT;
+    private static final int CANCEL_ALL_REQUEST_CODE = 14;
 
     private OfflineNotifications() {
     }
@@ -63,9 +64,9 @@ final class OfflineNotifications {
     }
 
     private static PendingIntent serviceIntent(Context context, String service, String action,
-                                               @Nullable String videoId, int requestCode) {
+                                               @Nullable String key, int requestCode) {
         Intent intent = new Intent(action).setClassName(context, service);
-        if (videoId != null) intent.putExtra(OfflineScreens.EXTRA_VIDEO_ID, videoId);
+        if (key != null) intent.putExtra(OfflineScreens.EXTRA_VIDEO_ID, key);
         return PendingIntent.getService(context, requestCode, intent, FLAGS);
     }
 
@@ -98,6 +99,9 @@ final class OfflineNotifications {
                     ? str("morphe_offline_download_starting")
                     : str("morphe_offline_download_progress", percent);
         };
+        final OfflineDownloader.Batch batch = task.batch;
+        // A playlist shows its place in the list and offers to cancel all of it.
+        if (batch != null) text = task.index + "/" + batch.total + " · " + text;
         if (queued > 0) text = text + " · " + str("morphe_offline_download_queued_count", queued);
 
         builder.setContentTitle(task.title)
@@ -105,7 +109,14 @@ final class OfflineNotifications {
                 .setProgress(100, Math.max(0, percent), percent < 0 || task.getState() != OfflineDownloader.State.DOWNLOADING)
                 .addAction(action(context, android.R.drawable.ic_menu_close_clear_cancel, str("morphe_offline_cancel"),
                         serviceIntent(context, OfflineServiceHooks.KEEP_ALIVE_SERVICE,
-                                OfflineServiceHooks.ACTION_DOWNLOAD_CANCEL, task.videoId, task.videoId.hashCode())));
+                                OfflineServiceHooks.ACTION_DOWNLOAD_CANCEL, task.key, task.key.hashCode())));
+        if (batch != null) {
+            if (!batch.title.isEmpty()) builder.setSubText(batch.title);
+            builder.addAction(action(context, android.R.drawable.ic_menu_close_clear_cancel,
+                    str("morphe_offline_cancel_all"),
+                    serviceIntent(context, OfflineServiceHooks.KEEP_ALIVE_SERVICE,
+                            OfflineServiceHooks.ACTION_DOWNLOAD_CANCEL_ALL, null, CANCEL_ALL_REQUEST_CODE)));
+        }
         return builder.build();
     }
 
@@ -113,7 +124,8 @@ final class OfflineNotifications {
         return new Notification.Action.Builder(Icon.createWithResource(context, icon), title, intent).build();
     }
 
-    static void showDownloadFinished(Context context, String videoId, String title) {
+    /** @param key {@link OfflineVideo#key()} of the saved download. */
+    static void showDownloadFinished(Context context, String key, String title) {
         createChannels(context);
         NotificationManager manager = manager(context);
         if (manager == null) return;
@@ -122,12 +134,13 @@ final class OfflineNotifications {
                 .setContentTitle(title)
                 .setContentText(str("morphe_offline_download_complete"))
                 .setAutoCancel(true)
-                .setContentIntent(activityIntent(context, OfflineScreens.playerIntent(context, videoId), videoId.hashCode()))
+                .setContentIntent(activityIntent(context, OfflineScreens.playerIntent(context, key),
+                        key.hashCode()))
                 .build();
-        manager.notify(resultId(videoId), notification);
+        manager.notify(resultId(key), notification);
     }
 
-    static void showDownloadFailed(Context context, String videoId, String title, String reason) {
+    static void showDownloadFailed(Context context, String key, String title, String reason) {
         createChannels(context);
         NotificationManager manager = manager(context);
         if (manager == null) return;
@@ -139,7 +152,24 @@ final class OfflineNotifications {
                 .setAutoCancel(true)
                 .setContentIntent(activityIntent(context, OfflineScreens.libraryIntent(context), 1))
                 .build();
-        manager.notify(resultId(videoId), notification);
+        manager.notify(resultId(key), notification);
+    }
+
+    /** The one notification of a finished playlist download. */
+    static void showBatchSummary(Context context, OfflineDownloader.Batch batch, String summary) {
+        createChannels(context);
+        NotificationManager manager = manager(context);
+        if (manager == null) return;
+        Notification notification = new Notification.Builder(context, DOWNLOAD_CHANNEL)
+                .setSmallIcon(batch.failed.get() > 0 ? android.R.drawable.stat_notify_error
+                        : android.R.drawable.stat_sys_download_done)
+                .setContentTitle(batch.title.isEmpty() ? str("morphe_offline_batch_title") : batch.title)
+                .setContentText(summary.replace('\n', ' '))
+                .setStyle(new Notification.BigTextStyle().bigText(summary))
+                .setAutoCancel(true)
+                .setContentIntent(activityIntent(context, OfflineScreens.libraryIntent(context), 1))
+                .build();
+        manager.notify(("morphe_offline_batch_" + batch.id).hashCode(), notification);
     }
 
     private static int resultId(String videoId) {
@@ -148,7 +178,7 @@ final class OfflineNotifications {
 
     static Notification buildPlayback(Context context, MediaSession.Token token, String title,
                                       String author, @Nullable Bitmap artwork, boolean playing,
-                                      @Nullable String videoId) {
+                                      @Nullable String key) {
         createChannels(context);
         final String service = OfflineServiceHooks.BACKGROUND_SERVICE;
         Notification.Builder builder = new Notification.Builder(context, PLAYBACK_CHANNEL)
@@ -161,7 +191,7 @@ final class OfflineNotifications {
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setOngoing(playing)
                 .setCategory(Notification.CATEGORY_TRANSPORT)
-                .setContentIntent(activityIntent(context, OfflineScreens.playerIntent(context, videoId), 2))
+                .setContentIntent(activityIntent(context, OfflineScreens.playerIntent(context, key), 2))
                 .setDeleteIntent(serviceIntent(context, service, OfflineServiceHooks.ACTION_PLAYBACK_CLOSE, null, 13))
                 .addAction(action(context, android.R.drawable.ic_media_previous, str("morphe_offline_previous"),
                         serviceIntent(context, service, OfflineServiceHooks.ACTION_PLAYBACK_PREVIOUS, null, 10)))

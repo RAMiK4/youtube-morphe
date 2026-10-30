@@ -44,6 +44,7 @@ public final class DefaultSettingsPatch {
             "app.morphe.extension.shared.settings.SharedYouTubeSettings",
             "app.morphe.extension.youtube.settings.Settings",
             "app.morphe.extension.youtube.settings.YandexVotSettings",
+            "app.morphe.extension.youtube.patches.offline.SaveToDeviceSettings",
     };
 
     private static boolean done;

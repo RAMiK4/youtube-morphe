@@ -132,10 +132,11 @@ jobs:
           [ "$clash" -eq 0 ] || exit 1
           cp -rv "$GITHUB_WORKSPACE"/extras/patches/. patches/
           cp -rv "$GITHUB_WORKSPACE"/extras/extensions/. extensions/
-          # Strings from extras/strings/<locale>/strings.xml are appended to the YouTube strings
-          for src in "$GITHUB_WORKSPACE"/extras/strings/*/strings.xml; do
+          # Strings and arrays from extras/strings/<locale>/{strings,arrays}.xml are appended to the YouTube ones
+          for src in "$GITHUB_WORKSPACE"/extras/strings/*/strings.xml "$GITHUB_WORKSPACE"/extras/strings/*/arrays.xml; do
+            [ -f "$src" ] || continue
             loc=$(basename "$(dirname "$src")")
-            dst="patches/src/main/resources/addresources/$loc/youtube/strings.xml"
+            dst="patches/src/main/resources/addresources/$loc/youtube/$(basename "$src")"
             [ -f "$dst" ] || { echo "::error::Strings file $dst not found"; exit 1; }
             python3 - "$src" "$dst" <<'PY'
           import sys
@@ -145,7 +146,7 @@ jobs:
           i = text.rindex("</resources>")
           open(dst, "w", encoding="utf-8").write(text[:i] + extra + text[i:])
           PY
-            echo "Strings added: $loc"
+            echo "Added: $loc/$(basename "$src")"
           done
           ./gradlew :patches:buildAndroid --no-daemon
           cp patches/build/libs/patches-*.mpp "$RUNNER_TEMP/patches.mpp"

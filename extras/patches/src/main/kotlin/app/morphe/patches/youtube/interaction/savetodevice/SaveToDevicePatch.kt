@@ -23,10 +23,13 @@ import app.morphe.patcher.util.getReference
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod.Companion.toMutable
 import app.morphe.patcher.util.smali.ExternalLabel
+import app.morphe.patches.shared.misc.settings.preference.ListPreference
 import app.morphe.patches.shared.misc.settings.preference.NonInteractivePreference
+import app.morphe.patches.shared.misc.settings.preference.PreferenceCategory
 import app.morphe.patches.shared.misc.settings.preference.PreferenceScreenPreference
 import app.morphe.patches.shared.misc.settings.preference.PreferenceScreenPreference.Sorting
 import app.morphe.patches.shared.misc.settings.preference.SwitchPreference
+import app.morphe.patches.shared.misc.settings.preference.TextPreference
 import app.morphe.patches.youtube.interaction.downloads.downloadsPatch
 import app.morphe.patches.youtube.misc.extension.sharedExtensionPatch
 import app.morphe.patches.youtube.misc.settings.PreferenceScreen
@@ -72,7 +75,7 @@ private val saveToDeviceResourcePatch = resourcePatch {
             ResourceGroup(
                 "drawable",
                 *arrayOf(
-                    "back", "check", "close", "next", "pause", "play",
+                    "aspect", "back", "check", "close", "next", "pause", "play",
                     "previous", "rotate", "search", "sort", "speed",
                 ).map { "morphe_offline_$it.xml" }.toTypedArray(),
             ),
@@ -85,6 +88,60 @@ private val saveToDeviceResourcePatch = resourcePatch {
                 preferences = setOf(
                     SwitchPreference("morphe_save_to_device"),
                     SwitchPreference("morphe_offline_replace_downloads_page"),
+                    PreferenceScreenPreference(
+                        key = "morphe_offline_download_options",
+                        sorting = Sorting.UNSORTED,
+                        preferences = setOf(
+                            PreferenceCategory(
+                                key = "morphe_offline_category_formats",
+                                titleKey = "morphe_offline_category_formats",
+                                sorting = Sorting.UNSORTED,
+                                preferences = setOf(
+                                    SwitchPreference("morphe_offline_codec_h264"),
+                                    SwitchPreference("morphe_offline_codec_vp9"),
+                                    SwitchPreference("morphe_offline_codec_av1"),
+                                    SwitchPreference("morphe_offline_audio_opus"),
+                                    SwitchPreference("morphe_offline_audio_aac"),
+                                    SwitchPreference("morphe_offline_show_format_ids"),
+                                )
+                            ),
+                            PreferenceCategory(
+                                key = "morphe_offline_category_quality",
+                                titleKey = "morphe_offline_category_quality",
+                                sorting = Sorting.UNSORTED,
+                                preferences = setOf(
+                                    ListPreference(
+                                        key = "morphe_offline_min_height",
+                                        entriesKey = "morphe_offline_height_entries",
+                                        entryValuesKey = "morphe_offline_height_entry_values",
+                                    ),
+                                    ListPreference(
+                                        key = "morphe_offline_max_height",
+                                        entriesKey = "morphe_offline_height_entries",
+                                        entryValuesKey = "morphe_offline_height_entry_values",
+                                    ),
+                                )
+                            ),
+                            PreferenceCategory(
+                                key = "morphe_offline_category_folders",
+                                titleKey = "morphe_offline_category_folders",
+                                sorting = Sorting.UNSORTED,
+                                preferences = setOf(
+                                    TextPreference("morphe_offline_video_folder"),
+                                    TextPreference("morphe_offline_audio_folder"),
+                                    TextPreference("morphe_offline_thumbnail_folder"),
+                                )
+                            ),
+                            PreferenceCategory(
+                                key = "morphe_offline_category_thumbnails",
+                                titleKey = "morphe_offline_category_thumbnails",
+                                sorting = Sorting.UNSORTED,
+                                preferences = setOf(
+                                    SwitchPreference("morphe_offline_save_thumbnail"),
+                                )
+                            ),
+                        )
+                    ),
                     NonInteractivePreference(
                         key = "morphe_offline_open_library",
                         tag = "app.morphe.extension.youtube.settings.preference.OpenOfflineLibraryPreference",
@@ -99,7 +156,7 @@ private val saveToDeviceResourcePatch = resourcePatch {
 @Suppress("unused")
 val saveToDevicePatch = bytecodePatch(
     name = "Save to device",
-    description = "Adds an option to download videos as files to the device, " +
+    description = "Adds an option to download videos, audio and thumbnails as files to the device, " +
         "with a quality picker, a library of the saved videos and an offline player.",
 ) {
     dependsOn(

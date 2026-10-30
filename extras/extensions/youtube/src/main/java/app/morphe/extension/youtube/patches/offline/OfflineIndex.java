@@ -31,8 +31,9 @@ import app.morphe.extension.shared.Logger;
 import app.morphe.extension.shared.Utils;
 
 /**
- * Metadata of the downloaded videos, kept as JSON in {@code filesDir/morphe_offline/index.json}.
- * The media files themselves live in MediaStore ({@code Movies/Morphe}).
+ * Metadata of the downloads, kept as JSON in {@code filesDir/morphe_offline/index.json}.
+ * The media files themselves live in MediaStore (the video and audio folders of the settings).
+ * Entries are identified by {@link OfflineVideo#key()}, which is the video id for videos.
  */
 public final class OfflineIndex {
     private static final String DIRECTORY = "morphe_offline";
@@ -55,11 +56,11 @@ public final class OfflineIndex {
         return directory;
     }
 
-    static File getThumbnailFile(Context context, String videoId) {
+    static File getThumbnailFile(Context context, String key) {
         File directory = new File(getDirectory(context), THUMBNAILS);
         //noinspection ResultOfMethodCallIgnored
         directory.mkdirs();
-        return new File(directory, videoId + ".jpg");
+        return new File(directory, key + ".jpg");
     }
 
     private static List<OfflineVideo> loaded() {
@@ -115,11 +116,12 @@ public final class OfflineIndex {
         }
     }
 
+    /** @param key The video id for videos, see {@link OfflineVideo#key()}. */
     @Nullable
-    public static OfflineVideo get(String videoId) {
+    public static OfflineVideo get(String key) {
         synchronized (LOCK) {
             for (OfflineVideo video : loaded()) {
-                if (video.videoId.equals(videoId)) return video;
+                if (video.key().equals(key)) return video;
             }
             return null;
         }
@@ -129,7 +131,7 @@ public final class OfflineIndex {
         synchronized (LOCK) {
             List<OfflineVideo> list = loaded();
             for (int i = 0; i < list.size(); i++) {
-                if (list.get(i).videoId.equals(video.videoId)) {
+                if (list.get(i).key().equals(video.key())) {
                     list.remove(i);
                     break;
                 }
@@ -140,13 +142,13 @@ public final class OfflineIndex {
         notifyListeners();
     }
 
-    static void remove(String videoId) {
+    static void remove(String key) {
         boolean removed = false;
         synchronized (LOCK) {
             List<OfflineVideo> list = loaded();
             for (int i = 0; i < list.size(); i++) {
                 OfflineVideo video = list.get(i);
-                if (video.videoId.equals(videoId)) {
+                if (video.key().equals(key)) {
                     list.remove(i);
                     removed = true;
                     if (!video.thumbnailPath.isEmpty()) {
@@ -162,10 +164,10 @@ public final class OfflineIndex {
     }
 
     /** Persists the resume position. Does not notify listeners, as nothing visible changes. */
-    static void savePosition(String videoId, long positionMs) {
+    static void savePosition(String key, long positionMs) {
         synchronized (LOCK) {
             for (OfflineVideo video : loaded()) {
-                if (video.videoId.equals(videoId)) {
+                if (video.key().equals(key)) {
                     // No equality short-circuit: the player already updated this same
                     // instance before calling here.
                     video.lastPositionMs = positionMs;

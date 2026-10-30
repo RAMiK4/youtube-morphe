@@ -4,7 +4,7 @@
 
 # YouTube Morphe
 
-YouTube with all [Morphe](https://github.com/MorpheApp/morphe-patches) patches, voice-over translation, a built-in video downloader and ready-made settings.
+YouTube with all [Morphe](https://github.com/MorpheApp/morphe-patches) patches, voice-over translation, a built-in video and audio downloader and ready-made settings.
 
 [![Latest release](https://img.shields.io/github/v/release/RAMiK4/youtube-morphe?label=Download&sort=date&style=for-the-badge)](https://github.com/RAMiK4/youtube-morphe/releases/latest)
 
@@ -16,7 +16,7 @@ YouTube with all [Morphe](https://github.com/MorpheApp/morphe-patches) patches, 
 |---|---|
 | 🧩 **All Morphe patches for YouTube** | Built on the official Morphe patches, which are never modified |
 | 🗣️ **Google and Yandex voice-over translation** | Listen to videos in your language (VoT) |
-| ⬇️ **Video downloader with Save to device** | Download videos as files with a quality picker, and watch them offline: *Morphe settings → Player → Save to device* |
+| ⬇️ **Video, audio and thumbnail downloader with Save to device** | Download videos, audio (Opus / M4A) and thumbnails as files with a quality picker, and watch them offline: *Morphe settings → Player → Save to device* |
 | ⚙️ **Customizable preset settings** | A Premium-like experience from the first start. Your own changes are always kept |
 | 🏝️ **Extra clone variant** | Dynamic Island on supported devices |
 | 🔔 **In-app update check** | New builds are shown in the app: *Morphe settings → Updates* |

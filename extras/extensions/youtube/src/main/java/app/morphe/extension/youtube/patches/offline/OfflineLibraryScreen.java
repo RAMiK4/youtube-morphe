@@ -12,6 +12,7 @@ package app.morphe.extension.youtube.patches.offline;
 
 import static app.morphe.extension.shared.StringRef.str;
 
+import android.app.AlertDialog;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
@@ -55,7 +56,6 @@ import app.morphe.extension.shared.ui.Dim;
 import app.morphe.extension.shared.ResourceUtils;
 import app.morphe.extension.shared.ResourceType;
 import app.morphe.extension.shared.settings.preference.ToolbarPreferenceFragment;
-import android.app.AlertDialog;
 
 /**
  * The offline library: downloads in progress first, then the downloaded videos.
@@ -83,6 +83,7 @@ final class OfflineLibraryScreen implements OfflineScreens.Screen {
     private final TextView emptyView;
     private final SearchView searchView;
     private final MenuItem searchItem;
+    private final MenuItem cancelAllItem;
 
     private final List<Object> rows = new ArrayList<>();
     private String query = "";
@@ -180,6 +181,16 @@ final class OfflineLibraryScreen implements OfflineScreens.Screen {
             return true;
         });
 
+        // A playlist queues many downloads, so they can be cancelled together.
+        cancelAllItem = menu.add(str("morphe_offline_cancel_all"));
+        cancelAllItem.setIcon(OfflineUi.icon(activity, "close", foreground));
+        cancelAllItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
+        cancelAllItem.setVisible(false);
+        cancelAllItem.setOnMenuItemClickListener(clicked -> {
+            confirmCancelAll();
+            return true;
+        });
+
         FrameLayout content = new FrameLayout(activity);
         ListView list = new ListView(activity);
         list.setDivider(null);
@@ -187,7 +198,7 @@ final class OfflineLibraryScreen implements OfflineScreens.Screen {
         list.setOnItemClickListener((parent, view, position, id) -> {
             Object row = rows.get(position);
             if (row instanceof OfflineVideo video) {
-                OfflineScreens.openPlayer(activity, video.videoId);
+                OfflineScreens.openPlayer(activity, video.key());
             }
         });
         list.setOnItemLongClickListener((parent, view, position, id) -> {
@@ -255,7 +266,9 @@ final class OfflineLibraryScreen implements OfflineScreens.Screen {
     private void reload() {
         if (destroyed) return;
         rows.clear();
-        for (OfflineDownloader.Task task : OfflineDownloader.getTasks()) {
+        List<OfflineDownloader.Task> tasks = OfflineDownloader.getTasks();
+        cancelAllItem.setVisible(tasks.size() > 1);
+        for (OfflineDownloader.Task task : tasks) {
             if (matches(task.title)) rows.add(task);
         }
         for (OfflineVideo video : OfflineScreens.sorted(OfflineIndex.getAll())) {
@@ -277,9 +290,9 @@ final class OfflineLibraryScreen implements OfflineScreens.Screen {
         Utils.runOnBackgroundThread(() -> {
             for (OfflineVideo video : videos) {
                 if (!OfflineMediaStore.exists(activity.getApplicationContext(), video.contentUri)) {
-                    Logger.printInfo(() -> "File of " + video.videoId + " is gone, removing it from the library");
-                    Utils.runOnMainThread(() -> OfflinePlayer.closeIfPlaying(video.videoId));
-                    OfflineIndex.remove(video.videoId);
+                    Logger.printInfo(() -> "File of " + video.key() + " is gone, removing it from the library");
+                    Utils.runOnMainThread(() -> OfflinePlayer.closeIfPlaying(video.key()));
+                    OfflineIndex.remove(video.key());
                 }
             }
         });
@@ -349,14 +362,23 @@ final class OfflineLibraryScreen implements OfflineScreens.Screen {
                 .setTitle(str("morphe_offline_delete_title"))
                 .setMessage(str("morphe_offline_delete_message", video.title))
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
-                    OfflinePlayer.closeIfPlaying(video.videoId);
+                    OfflinePlayer.closeIfPlaying(video.key());
                     if (OfflineMediaStore.delete(activity, video.contentUri)) {
-                        Logger.printInfo(() -> "Deleted " + video.videoId);
-                        OfflineIndex.remove(video.videoId);
+                        Logger.printInfo(() -> "Deleted " + video.key());
+                        OfflineIndex.remove(video.key());
                     }
                     // Otherwise the system asks for consent, and the next resume drops the entry
                     // if the user agreed.
                 })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void confirmCancelAll() {
+        new AlertDialog.Builder(activity)
+                .setTitle(str("morphe_offline_cancel_all"))
+                .setMessage(str("morphe_offline_cancel_all_message", OfflineDownloader.getTasks().size()))
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> OfflineDownloader.cancelAll(false))
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
@@ -458,7 +480,7 @@ final class OfflineLibraryScreen implements OfflineScreens.Screen {
         private final TextView title = text(15, foreground, 2);
         private final TextView status = text(13, secondary, 1);
         private final ProgressBar progress = new ProgressBar(activity, null, android.R.attr.progressBarStyleHorizontal);
-        private String videoId;
+        private String taskKey;
 
         TaskRow() {
             super(activity);
@@ -480,13 +502,13 @@ final class OfflineLibraryScreen implements OfflineScreens.Screen {
             cancel.setBackgroundColor(Color.TRANSPARENT);
             cancel.setContentDescription(str("morphe_offline_cancel"));
             cancel.setOnClickListener(v -> {
-                if (videoId != null) OfflineDownloader.cancel(videoId);
+                if (taskKey != null) OfflineDownloader.cancel(taskKey);
             });
             addView(cancel, new LayoutParams(Dim.dp(48), Dim.dp(48)));
         }
 
         void bind(OfflineDownloader.Task task) {
-            videoId = task.videoId;
+            taskKey = task.key;
             title.setText(task.title);
             final int percent = task.getPercent();
             final boolean determinate = task.getState() == OfflineDownloader.State.DOWNLOADING && percent >= 0;
@@ -500,7 +522,11 @@ final class OfflineLibraryScreen implements OfflineScreens.Screen {
                         ? str("morphe_offline_download_starting")
                         : str("morphe_offline_download_progress", percent);
             };
-            status.setText(task.qualityLabel + " · " + state);
+            List<String> parts = new ArrayList<>();
+            if (task.batch != null) parts.add(task.index + "/" + task.batch.total);
+            if (!task.qualityLabel.isEmpty()) parts.add(task.qualityLabel);
+            parts.add(state);
+            status.setText(TextUtils.join(" · ", parts));
         }
     }
 
@@ -509,8 +535,8 @@ final class OfflineLibraryScreen implements OfflineScreens.Screen {
         private final TextView duration = text(12, Color.WHITE, 1);
         private final TextView title = text(15, foreground, 2);
         private final TextView channel = text(13, secondary, 1);
-        private final TextView details = text(13, secondary, 1);
-        private String videoId;
+        private final TextView details = text(13, secondary, 2);
+        private String videoKey;
 
         VideoRow() {
             super(activity);
@@ -550,38 +576,85 @@ final class OfflineLibraryScreen implements OfflineScreens.Screen {
         }
 
         void bind(OfflineVideo video) {
-            videoId = video.videoId;
+            videoKey = video.key();
             title.setText(video.title);
             channel.setText(video.author);
             channel.setVisibility(video.author.isEmpty() ? GONE : VISIBLE);
-            List<String> parts = new ArrayList<>();
-            if (!video.qualityLabel.isEmpty()) parts.add(video.qualityLabel);
-            if (video.sizeBytes > 0) parts.add(Formatter.formatShortFileSize(activity, video.sizeBytes));
-            if (video.lastPositionMs > 0 && video.lengthMs > 0) {
-                parts.add(str("morphe_offline_library_resume", formatDuration(video.lastPositionMs)));
-            }
-            details.setText(TextUtils.join(" · ", parts));
+            details.setText(describe(video));
             duration.setText(formatDuration(video.lengthMs));
             duration.setVisibility(video.lengthMs > 0 ? VISIBLE : GONE);
             loadThumbnail(video);
         }
 
+        /**
+         * The meta line of the card: the quality and the size, then the codec and the format id.
+         * The resume position gets a line of its own.
+         */
+        private CharSequence describe(OfflineVideo video) {
+            StringBuilder text = new StringBuilder();
+            appendPart(text, video.audioOnly ? audioCodecName(video) : video.qualityLabel);
+            if (video.sizeBytes > 0) {
+                appendPart(text, Formatter.formatShortFileSize(activity, video.sizeBytes));
+            }
+            appendPart(text, technicalDetails(video));
+
+            if (video.lastPositionMs > 0 && video.lengthMs > 0) {
+                if (text.length() > 0) text.append('\n');
+                text.append(str("morphe_offline_library_resume", formatDuration(video.lastPositionMs)));
+            }
+            return text;
+        }
+
+        /**
+         * The codec and the format id of a video, or the bitrate and the format id of an audio
+         * download. Entries made before these were stored show nothing here.
+         */
+        private String technicalDetails(OfflineVideo video) {
+            if (video.codec.isEmpty()) return "";
+
+            List<String> parts = new ArrayList<>(2);
+            if (video.audioOnly) {
+                if (video.bitrateKbps > 0) parts.add(str("morphe_offline_library_bitrate", video.bitrateKbps));
+            } else {
+                parts.add(video.codec);
+            }
+            if (video.itag > 0) parts.add(str("morphe_offline_picker_format_id", video.itag));
+            return TextUtils.join(" · ", parts);
+        }
+
+        /** {@code Opus} and {@code M4A} instead of the {@code Opus audio} label of the picker. */
+        private String audioCodecName(OfflineVideo video) {
+            if (OfflineFormats.CODEC_OPUS.equals(video.codec)) {
+                return str("morphe_offline_picker_audio_opus");
+            }
+            if (OfflineFormats.CODEC_AAC.equals(video.codec)) {
+                return str("morphe_offline_picker_audio_m4a");
+            }
+            return video.qualityLabel;
+        }
+
+        private void appendPart(StringBuilder text, String part) {
+            if (part.isEmpty()) return;
+            if (text.length() > 0) text.append(" · ");
+            text.append(part);
+        }
+
         private void loadThumbnail(OfflineVideo video) {
-            Bitmap cached = thumbnails.get(video.videoId);
+            final String key = video.key();
+            Bitmap cached = thumbnails.get(key);
             thumbnail.setImageBitmap(cached);
-            if (cached != null || video.thumbnailPath.isEmpty()
-                    || !thumbnailsLoading.add(video.videoId)) {
+            if (cached != null || video.thumbnailPath.isEmpty() || !thumbnailsLoading.add(key)) {
                 return;
             }
             Utils.runOnBackgroundThread(() -> {
                 BitmapFactory.Options options = new BitmapFactory.Options();
                 options.inSampleSize = 2;
                 Bitmap bitmap = BitmapFactory.decodeFile(video.thumbnailPath, options);
-                thumbnailsLoading.remove(video.videoId);
+                thumbnailsLoading.remove(key);
                 if (bitmap == null) return;
-                thumbnails.put(video.videoId, bitmap);
+                thumbnails.put(key, bitmap);
                 Utils.runOnMainThread(() -> {
-                    if (video.videoId.equals(videoId)) thumbnail.setImageBitmap(bitmap);
+                    if (key.equals(videoKey)) thumbnail.setImageBitmap(bitmap);
                 });
             });
         }

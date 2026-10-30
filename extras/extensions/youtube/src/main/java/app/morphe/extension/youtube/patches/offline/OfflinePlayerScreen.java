@@ -38,6 +38,7 @@ import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -65,12 +66,15 @@ final class OfflinePlayerScreen implements OfflineScreens.Screen, OfflinePlayer.
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final FrameLayout root;
     private final SurfaceView surfaceView;
+    /** Stands in for the picture of an audio-only download. */
+    private final ImageView artworkView;
     private final View controls;
     private final TextView title;
     private final ImageButton playPause;
     private final ImageButton previous;
     private final ImageButton next;
     private final ImageButton speedButton;
+    private final ImageButton aspectButton;
     private final ImageButton fullscreenButton;
     private final SeekBar seekBar;
     private final TextView position;
@@ -120,6 +124,11 @@ final class OfflinePlayerScreen implements OfflineScreens.Screen, OfflinePlayer.
                 OfflinePlayer.detachSurface(holder.getSurface());
             }
         });
+        artworkView = new ImageView(activity);
+        artworkView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        artworkView.setVisibility(View.GONE);
+        root.addView(artworkView, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER));
         root.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
             if (r - l != or - ol || b - t != ob - ot) {
                 // The host activity handles rotation itself and is not recreated,
@@ -149,6 +158,8 @@ final class OfflinePlayerScreen implements OfflineScreens.Screen, OfflinePlayer.
         LinearLayout top = new LinearLayout(activity);
         top.setOrientation(LinearLayout.HORIZONTAL);
         top.setGravity(Gravity.CENTER_VERTICAL);
+        // Taps on the very top edge are taken by the system (swipe to show the hidden bars).
+        top.setPadding(0, Dim.dp(16), 0, 0);
         ImageButton back = button("back", str("morphe_settings_navigate_up"));
         back.setOnClickListener(v -> activity.finish());
         top.addView(back);
@@ -159,6 +170,9 @@ final class OfflinePlayerScreen implements OfflineScreens.Screen, OfflinePlayer.
         speedButton = button("speed", str("morphe_offline_player_speed"));
         speedButton.setOnClickListener(this::showSpeedMenu);
         top.addView(speedButton);
+        aspectButton = button("aspect", str("morphe_offline_player_aspect"));
+        aspectButton.setOnClickListener(v -> cycleAspectMode());
+        top.addView(aspectButton);
         overlay.addView(top, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP));
 
@@ -273,14 +287,14 @@ final class OfflinePlayerScreen implements OfflineScreens.Screen, OfflinePlayer.
 
     /** @return False if there is nothing to show. */
     private boolean openRequestedVideo() {
-        String videoId = activity.getIntent().getStringExtra(OfflineScreens.EXTRA_VIDEO_ID);
-        if (videoId == null) {
+        String key = activity.getIntent().getStringExtra(OfflineScreens.EXTRA_VIDEO_ID);
+        if (key == null) {
             // From the playback notification: show whatever plays.
             if (OfflinePlayer.isSessionActive()) return true;
             Utils.showToastShort(str("morphe_offline_nothing_playing"));
             return false;
         }
-        OfflineVideo video = OfflineIndex.get(videoId);
+        OfflineVideo video = OfflineIndex.get(key);
         if (video == null) {
             Utils.showToastShort(str("morphe_offline_video_missing"));
             return false;
@@ -401,15 +415,74 @@ final class OfflinePlayerScreen implements OfflineScreens.Screen, OfflinePlayer.
         final int width = root.getWidth();
         final int height = root.getHeight();
         if (videoWidth <= 0 || videoHeight <= 0 || width <= 0 || height <= 0) return;
-        float scale = Math.min((float) width / videoWidth, (float) height / videoHeight);
+
+        int[] size = surfaceSize(currentAspectMode(), videoWidth, videoHeight, width, height);
         FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) surfaceView.getLayoutParams();
-        int newWidth = Math.round(videoWidth * scale);
-        int newHeight = Math.round(videoHeight * scale);
-        if (params.width != newWidth || params.height != newHeight) {
-            params.width = newWidth;
-            params.height = newHeight;
-            params.gravity = Gravity.CENTER;
-            surfaceView.setLayoutParams(params);
+        if (params.width == size[0] && params.height == size[1]) return;
+
+        params.width = size[0];
+        params.height = size[1];
+        params.gravity = Gravity.CENTER;
+        surfaceView.setLayoutParams(params);
+    }
+
+    /**
+     * The surface size of a mode. The surface is centered in the root, which clips a surface that
+     * is larger than itself, so Zoom crops the picture and Original shows the native pixels.
+     */
+    private static int[] surfaceSize(AspectMode mode, int videoWidth, int videoHeight, int width, int height) {
+        if (mode == AspectMode.STRETCH) return new int[]{width, height};
+        if (mode == AspectMode.ORIGINAL) return new int[]{videoWidth, videoHeight};
+
+        final float scale = mode == AspectMode.ZOOM
+                ? Math.max((float) width / videoWidth, (float) height / videoHeight)
+                : Math.min((float) width / videoWidth, (float) height / videoHeight);
+        return new int[]{Math.round(videoWidth * scale), Math.round(videoHeight * scale)};
+    }
+
+    /** The next mode of the cycle, saved so the next video and the next start use it too. */
+    private void cycleAspectMode() {
+        final AspectMode mode = currentAspectMode().next();
+        SaveToDeviceSettings.ASPECT_MODE.save(mode.name());
+        fitVideo();
+        Utils.showToastShort(str(mode.labelKey()));
+        scheduleHide();
+    }
+
+    private static AspectMode currentAspectMode() {
+        return AspectMode.fromSetting(SaveToDeviceSettings.ASPECT_MODE.get());
+    }
+
+    /** How the picture fills the screen, cycled by the aspect ratio button. */
+    private enum AspectMode {
+        /** Letterboxed, the whole picture is visible. */
+        FIT,
+        /** Fills the screen, the picture is distorted. */
+        STRETCH,
+        /** Fills the screen, the edges of the picture are cropped. */
+        ZOOM,
+        /** Native pixel size, centered. */
+        ORIGINAL;
+
+        AspectMode next() {
+            final AspectMode[] modes = values();
+            return modes[(ordinal() + 1) % modes.length];
+        }
+
+        static AspectMode fromSetting(String value) {
+            for (AspectMode mode : values()) {
+                if (mode.name().equals(value)) return mode;
+            }
+            return FIT;
+        }
+
+        String labelKey() {
+            return switch (this) {
+                case STRETCH -> "morphe_offline_aspect_stretch";
+                case ZOOM -> "morphe_offline_aspect_zoom";
+                case ORIGINAL -> "morphe_offline_aspect_original";
+                default -> "morphe_offline_aspect_fit";
+            };
         }
     }
 
@@ -477,6 +550,8 @@ final class OfflinePlayerScreen implements OfflineScreens.Screen, OfflinePlayer.
             return;
         }
         title.setText(video.title);
+        showArtwork(video);
+        aspectButton.setVisibility(video.audioOnly ? View.GONE : View.VISIBLE);
         final boolean playing = OfflinePlayer.isPlaying();
         setIcon(playPause, playing ? "pause" : "play");
         playPause.setContentDescription(playing ? str("morphe_offline_pause") : str("morphe_offline_play"));
@@ -493,6 +568,11 @@ final class OfflinePlayerScreen implements OfflineScreens.Screen, OfflinePlayer.
         }
         fitVideo();
         updateProgress();
+    }
+
+    private void showArtwork(OfflineVideo video) {
+        artworkView.setVisibility(video.audioOnly ? View.VISIBLE : View.GONE);
+        artworkView.setImageBitmap(video.audioOnly ? OfflinePlayer.getArtwork() : null);
     }
 
     @Override

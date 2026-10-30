@@ -123,6 +123,12 @@ public final class OfflinePlayer {
         return current;
     }
 
+    /** The thumbnail of the current entry, which the player screen shows for audio. */
+    @Nullable
+    static Bitmap getArtwork() {
+        return artwork;
+    }
+
     static long getPosition() {
         try {
             return player != null && prepared ? player.getCurrentPosition() : 0;
@@ -152,12 +158,12 @@ public final class OfflinePlayer {
     }
 
     static boolean hasPrevious() {
-        return current != null && queue.indexOf(current.videoId) > 0;
+        return current != null && queue.indexOf(current.key()) > 0;
     }
 
     static boolean hasNext() {
         if (current == null) return false;
-        int index = queue.indexOf(current.videoId);
+        int index = queue.indexOf(current.key());
         return index >= 0 && index < queue.size() - 1;
     }
 
@@ -168,14 +174,14 @@ public final class OfflinePlayer {
     /**
      * Starts playing a video, or keeps playing it if it is already the current one.
      *
-     * @param order The video ids of the library in display order, for previous and next.
+     * @param order The entry keys of the library in display order, for previous and next.
      */
     static void play(OfflineVideo video, List<String> order) {
         queue.clear();
         queue.addAll(order);
-        if (!queue.contains(video.videoId)) queue.add(video.videoId);
+        if (!queue.contains(video.key())) queue.add(video.key());
 
-        if (current != null && current.videoId.equals(video.videoId) && player != null) {
+        if (current != null && current.key().equals(video.key()) && player != null) {
             if (!isPlaying()) resume();
             return;
         }
@@ -187,8 +193,8 @@ public final class OfflinePlayer {
         releasePlayer();
         Context context = Utils.getContext();
         current = video;
-        // say so instead of showing a grey picture when the AV1 cannot be decoded.
-        if (OfflineFormats.CODEC_AV1.equals(video.codec)) {
+        // Say so instead of showing a grey picture when the AV1 cannot be decoded.
+        if (!video.audioOnly && OfflineFormats.CODEC_AV1.equals(video.codec)) {
             java.util.regex.Matcher quality = java.util.regex.Pattern.compile("^(\\d+)p(\\d+)?").matcher(video.qualityLabel);
             if (quality.find() && !OfflineFormats.canDecodeAv1(0, Integer.parseInt(quality.group(1)),
                     quality.group(2) != null ? Integer.parseInt(quality.group(2)) : 30, "video/mp4; codecs=\"av01.0.08m.08\"")) {
@@ -205,7 +211,9 @@ public final class OfflinePlayer {
         player = mediaPlayer;
         mediaPlayer.setAudioAttributes(new AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_MEDIA)
-                .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
+                .setContentType(video.audioOnly
+                        ? AudioAttributes.CONTENT_TYPE_MUSIC
+                        : AudioAttributes.CONTENT_TYPE_MOVIE)
                 .build());
         mediaPlayer.setWakeMode(context, android.os.PowerManager.PARTIAL_WAKE_LOCK);
         mediaPlayer.setOnPreparedListener(mp -> {
@@ -216,7 +224,7 @@ public final class OfflinePlayer {
                 mp.seekTo((int) resume);
             }
             applySpeed();
-            Logger.printInfo(() -> "Prepared " + video.videoId + " (" + mp.getDuration() + " ms), resume at " + resume);
+            Logger.printInfo(() -> "Prepared " + video.key() + " (" + mp.getDuration() + " ms), resume at " + resume);
             if (playWhenPrepared) resume();
             else onStateChanged();
         });
@@ -227,8 +235,8 @@ public final class OfflinePlayer {
         });
         mediaPlayer.setOnCompletionListener(mp -> {
             if (mp != player) return;
-            Logger.printInfo(() -> "Completed " + video.videoId);
-            OfflineIndex.savePosition(video.videoId, 0);
+            Logger.printInfo(() -> "Completed " + video.key());
+            OfflineIndex.savePosition(video.key(), 0);
             video.lastPositionMs = 0;
             if (hasNext()) {
                 skip(1);
@@ -238,7 +246,7 @@ public final class OfflinePlayer {
             }
         });
         mediaPlayer.setOnErrorListener((mp, what, extra) -> {
-            Logger.printException(() -> "Playback error " + what + "/" + extra + " for " + video.videoId);
+            Logger.printException(() -> "Playback error " + what + "/" + extra + " for " + video.key());
             Utils.showToastShort(app.morphe.extension.shared.StringRef.str("morphe_offline_playback_error"));
             close();
             return true;
@@ -266,6 +274,7 @@ public final class OfflinePlayer {
             playWhenPrepared = true;
             return;
         }
+        resumeOnFocusGain = false;
         if (!requestFocus()) {
             Logger.printInfo(() -> "Audio focus denied, not resuming");
             return;
@@ -285,6 +294,26 @@ public final class OfflinePlayer {
     }
 
     static void pause() {
+        resumeOnFocusGain = false;
+        pausePlayback(true);
+    }
+
+    /**
+     * Pauses without giving up the audio focus, so the matching gain resumes playback.
+     */
+    private static void pauseOnFocusLoss() {
+        // A second transient loss must not forget the resume that the first one waits for.
+        boolean wasPlaying = isPlaying() || resumeOnFocusGain;
+
+        pausePlayback(false);
+        resumeOnFocusGain = wasPlaying;
+    }
+
+    /**
+     * @param abandonFocus whether to give up the focus, letting other apps play.
+     *                     Only the transient focus loss keeps it, to resume on the matching gain.
+     */
+    private static void pausePlayback(boolean abandonFocus) {
         playWhenPrepared = false;
         MediaPlayer mediaPlayer = player;
         if (mediaPlayer != null && prepared) {
@@ -295,6 +324,7 @@ public final class OfflinePlayer {
         }
         unregisterNoisyReceiver();
         savePosition();
+        if (abandonFocus) abandonFocus();
         onStateChanged();
     }
 
@@ -355,7 +385,7 @@ public final class OfflinePlayer {
             seekTo(0);
             return;
         }
-        int index = queue.indexOf(current.videoId) + direction;
+        int index = queue.indexOf(current.key()) + direction;
         while (index >= 0 && index < queue.size()) {
             OfflineVideo next = OfflineIndex.get(queue.get(index));
             if (next != null) {
@@ -383,9 +413,9 @@ public final class OfflinePlayer {
         notifyListeners();
     }
 
-    /** Ends the session if it plays the given video, which is about to be deleted. */
-    static void closeIfPlaying(String videoId) {
-        if (current != null && current.videoId.equals(videoId)) close();
+    /** Ends the session if it plays the given entry, which is about to be deleted. */
+    static void closeIfPlaying(String key) {
+        if (current != null && current.key().equals(key)) close();
     }
 
     private static void releasePlayer() {
@@ -442,8 +472,8 @@ public final class OfflinePlayer {
         if (video == null || player == null || !prepared) return;
         long position = getPosition();
         video.lastPositionMs = position;
-        final String videoId = video.videoId;
-        Utils.runOnBackgroundThread(() -> OfflineIndex.savePosition(videoId, position));
+        final String key = video.key();
+        Utils.runOnBackgroundThread(() -> OfflineIndex.savePosition(key, position));
     }
 
     // endregion
@@ -456,14 +486,9 @@ public final class OfflinePlayer {
             case AudioManager.AUDIOFOCUS_LOSS -> {
                 // Another player, for example YouTube's own, took over for good.
                 Logger.printInfo(() -> "Audio focus lost, pausing offline playback");
-                resumeOnFocusGain = false;
-                pause();
-                abandonFocus();
-            }
-            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
-                resumeOnFocusGain = isPlaying();
                 pause();
             }
+            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> pauseOnFocusLoss();
             case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
                 if (mediaPlayer != null) mediaPlayer.setVolume(DUCK_VOLUME, DUCK_VOLUME);
             }
@@ -496,8 +521,14 @@ public final class OfflinePlayer {
     }
 
     private static void abandonFocus() {
+        // Null out the request first: a listener callback dispatched by the framework must not
+        // abandon twice and re-enter itself.
+        AudioFocusRequest request = focusRequest;
+        focusRequest = null;
+        if (request == null) return;
+
         AudioManager audio = (AudioManager) Utils.getContext().getSystemService(Context.AUDIO_SERVICE);
-        if (audio != null && focusRequest != null) audio.abandonAudioFocusRequest(focusRequest);
+        if (audio != null) audio.abandonAudioFocusRequest(request);
     }
 
     private static final BroadcastReceiver noisyReceiver = new BroadcastReceiver() {
@@ -616,7 +647,7 @@ public final class OfflinePlayer {
         OfflineVideo video = current;
         if (video == null || player == null) return null;
         return OfflineNotifications.buildPlayback(context, ensureSession().getSessionToken(),
-                video.title, video.author, artwork, isPlaying(), video.videoId);
+                video.title, video.author, artwork, isPlaying(), video.key());
     }
 
     private static void onStateChanged() {

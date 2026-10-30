@@ -18,7 +18,7 @@ The changelog is generated from the Morphe changelog (YouTube only), newest firs
 |---|---|
 | `settings/defaults.json` | Recommended settings (Morphe settings export). Each setting is applied once: on first install, or on the update that adds it. |
 | `branding/` | App icon (`mipmap-*`), header logo and notification icon (`drawable-*`) |
-| `extras/` | Additional patches: theme defaults, default settings, update check, restart on update, experimental notice |
+| `extras/` | Additional patches: theme defaults, default settings, update check, restart on update, experimental notice, Save to device. Strings and arrays of `extras/strings/<locale>/` are appended to the YouTube ones |
 | `addons/yavot/` | Fixes applied to the YaVoT add-on before it is built (`git apply` patches; skipped once YaVoT includes them) |
 
 Variant options (package, theme defaults) are set in `build_variant` calls of `.github/workflows/release.yml`.
