@@ -23,9 +23,14 @@ Newer versions come first; within a version the newest change is listed first, b
 
 MOD_FIXES: "## <patches version>" headings with "* " items, listed after the Morphe fixes of that version.
 
+EXTRA_FEATURES: same format, listed after the Morphe new features of that version. Only for releases that
+skip versions (for example the first dev build after a stable one): important features of the skipped
+versions that the selected sections do not list. Not a general rule; most versions have no section.
+
 The Markdown file is the release notes, the text file is the changelog of the in-app update dialog.
 
-Usage: changelog.py CHANGELOG.md VERSION OUT_MARKDOWN OUT_TEXT [--mod-features FILE] [--mod-fixes FILE] [--dates FILE]
+Usage: changelog.py CHANGELOG.md VERSION OUT_MARKDOWN OUT_TEXT [--mod-features FILE] [--mod-fixes FILE]
+                    [--extra-features FILE] [--dates FILE]
 """
 import argparse
 import re
@@ -119,7 +124,7 @@ def read_mod_features(path):
     return items
 
 
-def read_mod_fixes(path, version):
+def read_version_items(path, version):
     items, current = [], None
     for line in open(path, encoding="utf-8"):
         line = line.strip()
@@ -164,13 +169,15 @@ def main():
     parser.add_argument("out_txt")
     parser.add_argument("--mod-features")
     parser.add_argument("--mod-fixes")
+    parser.add_argument("--extra-features")
     parser.add_argument("--dates")
     args = parser.parse_args()
 
     version = args.version.lstrip("v")
     dates = read_dates(args.dates) if args.dates else {}
     selected = select(parse(args.changelog), version)
-    mod_fixes = read_mod_fixes(args.mod_fixes, version) if args.mod_fixes else []
+    mod_fixes = read_version_items(args.mod_fixes, version) if args.mod_fixes else []
+    extra_features = read_version_items(args.extra_features, version) if args.extra_features else []
     mod_features = read_mod_features(args.mod_features) if args.mod_features else []
 
     groups = []
@@ -179,6 +186,8 @@ def main():
         sections = selected if index == 0 else [s for s in selected if s["version"] == version]
         items = [item for s in sections if index in s["groups"]
                  for item in newest_first(s["groups"][index], dates)]
+        if index == 0:
+            items += extra_features
         if index == FIX_GROUP:
             items += mod_fixes
         if items:
