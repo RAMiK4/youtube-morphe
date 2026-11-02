@@ -85,7 +85,7 @@ S1 S2[/size][/center]
 [spoiler=⊕ Для работы модов требуется MicroG »]
 
 [b]✔ [color="#ff0044"]MicroG RE[/color][/b] [size=1](by WSTxda)[/size]
-🔗 [url="https://github.com/MorpheApp/MicroG-RE/releases/download/7.2.2/microg-7.2.2-noicon-arm64-v8a.apk"][color="#000000"]MicroG_RE-7.2.2.apk[/color][/url] (42,9 МБ)
+🔗 [url="https://github.com/MorpheApp/MicroG-RE/releases/download/7.3.0-dev.3/microg-7.3.0-dev.3-noicon-arm64-v8a.apk"][color="#000000"]MicroG_RE-7.3.0-dev.3.apk[/color][/url] (43,5 МБ)
 [size=1][i](если эта версия MicroG уже установлена, скачивать её заново не нужно)[/i][/size]
 
 1 - Сначала нужно установить MicroG RE [size=1](и обязательно предоставить ему разрешение на работу в фоне)[/size]
