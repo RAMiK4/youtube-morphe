@@ -421,6 +421,9 @@ jobs:
         run: |
           HIBY=$(cat "$RUNNER_TEMP"/out/*BBK_Clone.apk.label)
           MORPHE=$(cat "$RUNNER_TEMP"/out/*Amoled_Mod.apk.label)
+          # Recommended settings (settings/defaults.json), imported in Morphe settings → Other → Backup settings
+          SETTINGS="YT_Morphe_PRO_Settings_v${PATCHES_VER}.txt"
+          jq . settings/defaults.json > "$RUNNER_TEMP/$SETTINGS"
           {
             cat "$RUNNER_TEMP/changes.md"
             echo
@@ -430,6 +433,7 @@ jobs:
             echo "|---|---|"
             echo "| \`$MORPHE\` | \`app.morphe.android.youtube\` |"
             echo "| \`$HIBY\` | \`com.hiby.music\` |"
+            echo "| \`$SETTINGS\` | Recommended settings |"
           } > "$RUNNER_TEMP/notes.md"
           FILES=()
           for f in "$RUNNER_TEMP"/out/*.apk; do FILES+=("$f#$(cat "$f.label")"); done
@@ -437,6 +441,8 @@ jobs:
             --title "$APP_TITLE v$YT_VERSION p$PATCHES_VER (Mod)" \
             --notes-file "$RUNNER_TEMP/notes.md" \
             --latest
+          # Third file, uploaded after the APKs: the recommended settings for import
+          gh release upload "$TAG" "$RUNNER_TEMP/$SETTINGS#$SETTINGS"
 
       - name: Publish update info
         if: ${{ inputs.publish }}
