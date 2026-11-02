@@ -12,6 +12,14 @@ Every published build becomes the latest release. The workflow builds the offici
 
 The changelog is generated from the Morphe changelog (YouTube only), newest first: a stable version lists its own section; a dev version lists the new features of itself and the previous dev version, and the bug fixes of itself only. Fixes of the mod are added under `## <patches version>` in `notes/mod-fixes.md` and listed after the Morphe fixes of that version. Only when a release skips versions (such as the first dev build after a stable one), important features of the skipped versions can be added under `## <patches version>` in `notes/extra-features.md`; they are listed after the Morphe new features of that version. The release notes and the in-app dialog show the same order, New Features, Mod Features (`notes/mod-features.md`), Bug Fixes, then the files (release notes only). Release notes use `##` headings (GitHub draws a thin rule under them), the in-app dialog shows each title bold with a thin rule under it. Optional translations for the in-app dialog: `changelog/<language>.md` whose first line is `<!-- <patches version> -->`.
 
+## 4PDA post
+
+`notes/4pda-post.txt` is the post for the 4PDA topic, updated for each release (YouTube and patches versions, What's new, links).
+
+- An empty line after each `[spoiler=...]` title
+- No "test version" note next to dev patches versions, users could misread it
+- An empty line after the `YouTube Morphe PRO Settings` title, where the settings file `YouTube_Morphe_PRO_Settings_v<patches version>.txt` is attached (the contents of `settings/defaults.json`)
+
 ## Configuration
 
 | File | Purpose |
