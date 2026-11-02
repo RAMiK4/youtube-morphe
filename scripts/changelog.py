@@ -61,8 +61,9 @@ def clean(text):
 
 def strip_app(item):
     """'**YouTube - Scope:** text' -> '**Scope:** text', '**YouTube:** text' -> 'text'."""
-    item = re.sub(r"^\*\*YouTube:\*\*\s*", "", item)
-    return re.sub(r"^\*\*YouTube - ", "**", item)
+    # Shared scopes such as "YouTube / YouTube Music - Scope" are shortened the same way
+    item = re.sub(r"^\*\*YouTube(?:\s*/\s*[^*:-]+?)?:\*\*\s*", "", item)
+    return re.sub(r"^\*\*YouTube(?:\s*/\s*[^*:-]+?)? - ", "**", item)
 
 
 def relevant(item):
@@ -70,6 +71,10 @@ def relevant(item):
     if not m:
         return True  # General change.
     scope = m.group(1).lower()
+    # "YouTube / YouTube Music - Scope": the apps before " - "; YouTube among them keeps the change
+    apps = [app.strip() for app in scope.split(" - ")[0].split("/")]
+    if "youtube" in apps:
+        return True
     return not any(word in scope for word in EXCLUDED_SCOPES)
 
 
