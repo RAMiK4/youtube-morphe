@@ -111,7 +111,6 @@
   "vot_enabled": true,
   "vot_max_speech_rate": 12,
   "vot_original_audio_volume": 10,
-  "vot_session_enabled": true,
   "vot_translation_volume": 70,
   "vot_tts_voice_type": "en-AU-WilliamMultilingualNeural",
   "yandex_vot_audio_proxy_enabled": false,
