@@ -3,8 +3,8 @@
 Builds the YouTube part of the Morphe patches changelog for a patches version.
 
 Stable version: its own section (it already lists everything since the previous stable).
-Dev version: new features of the last two dev sections (itself included),
-bug fixes and improvements of the version itself only.
+Dev version: new features of the version itself, plus those of the previous dev when that one was not
+released (RELEASED), bug fixes and improvements of the version itself only.
 
 Each group is a title followed by its changes, without version headings:
 
@@ -18,8 +18,9 @@ Each group is a title followed by its changes, without version headings:
 The in-app dialog shows the titles bold with a thin rule under them. The release notes
 use "## <title>" headings (GitHub draws the same kind of rule) and add the files table.
 
-Newer versions come first; within a version the newest change is listed first, by the date of its commit
-(DATES: lines of "<commit hash> <unix time>", from git log). Without dates the order of Morphe is kept.
+Newer versions come first; within a version the order of the Morphe changelog is kept.
+
+RELEASED: patches versions that already have a release of the mod, one per line or separated by spaces.
 
 MOD_FIXES: "## <patches version>" headings with "* " items, listed after the Morphe fixes of that version.
 
@@ -30,16 +31,15 @@ versions that the selected sections do not list. Not a general rule; most versio
 The Markdown file is the release notes, the text file is the changelog of the in-app update dialog.
 
 Usage: changelog.py CHANGELOG.md VERSION OUT_MARKDOWN OUT_TEXT [--mod-features FILE] [--mod-fixes FILE]
-                    [--extra-features FILE] [--dates FILE]
+                    [--extra-features FILE] [--released FILE]
 """
 import argparse
 import re
 
 SECTION = re.compile(r"^##\s+\[([^\]]+)\]")
-COMMIT = re.compile(r"\(\[([0-9a-f]{7,40})\]\(")
 EXCLUDED_SCOPES = ("reddit", "music")
 SKIPPED_GROUPS = ("app support",)
-DEV_FEATURE_SECTIONS = 2  # Dev changelogs: new features of the version itself and the one before it.
+DEV_FEATURE_SECTIONS = 2  # Dev changelogs: at most the version itself and the unreleased dev before it.
 
 # Change types in the order they are shown. Older changelogs have titles without emoji.
 GROUPS = (
@@ -84,7 +84,7 @@ def group_index(title):
 
 
 def parse(path):
-    """[{version, groups: {group index: [(item, commit)]}}], newest first."""
+    """[{version, groups: {group index: [item]}}], newest first, items in the order of Morphe."""
     sections, current, group = [], None, None
     for line in open(path, encoding="utf-8"):
         line = line.rstrip("\n")
@@ -97,15 +97,13 @@ def parse(path):
             title = line[4:].strip()
             group = None if any(word in title.lower() for word in SKIPPED_GROUPS) else group_index(title)
         elif current is not None and group is not None and line.startswith("* "):
-            commit = COMMIT.findall(line)
             item = clean(line[2:])
             if relevant(item):
-                current["groups"].setdefault(group, []).append(
-                    (strip_app(item), commit[-1] if commit else None))
+                current["groups"].setdefault(group, []).append(strip_app(item))
     return sections
 
 
-def select(sections, version):
+def select(sections, version, released=()):
     index = next((i for i, s in enumerate(sections) if s["version"] == version), None)
     if index is None:
         raise SystemExit(f"Version {version} not found in changelog")
@@ -114,6 +112,9 @@ def select(sections, version):
     selected = []
     for section in sections[index:]:
         if "-dev" not in section["version"]:
+            break
+        # A dev that was already released listed its own features
+        if section["version"] != version and section["version"] in released:
             break
         if section["groups"]:
             selected.append(section)
@@ -140,26 +141,8 @@ def read_version_items(path, version):
     return items
 
 
-def read_dates(path):
-    dates = {}
-    for line in open(path, encoding="utf-8"):
-        parts = line.split()
-        if len(parts) == 2 and parts[1].isdigit():
-            dates[parts[0]] = int(parts[1])
-    return dates
-
-
-def newest_first(items, dates):
-    """Sorts by commit date, newest first. Items without a known date keep their place at the end."""
-    def date(commit):
-        if not commit:
-            return None
-        return next((t for h, t in dates.items() if h.startswith(commit)), None)
-
-    known = [(date(c), i, text) for i, (text, c) in enumerate(items)]
-    dated = sorted((x for x in known if x[0] is not None), key=lambda x: (-x[0], x[1]))
-    undated = [x for x in known if x[0] is None]
-    return [text for _, _, text in dated + undated]
+def read_released(path):
+    return {v.lstrip("v") for v in open(path, encoding="utf-8").read().split()}
 
 
 def plain(item):
@@ -175,12 +158,12 @@ def main():
     parser.add_argument("--mod-features")
     parser.add_argument("--mod-fixes")
     parser.add_argument("--extra-features")
-    parser.add_argument("--dates")
+    parser.add_argument("--released")
     args = parser.parse_args()
 
     version = args.version.lstrip("v")
-    dates = read_dates(args.dates) if args.dates else {}
-    selected = select(parse(args.changelog), version)
+    released = read_released(args.released) if args.released else set()
+    selected = select(parse(args.changelog), version, released)
     mod_fixes = read_version_items(args.mod_fixes, version) if args.mod_fixes else []
     extra_features = read_version_items(args.extra_features, version) if args.extra_features else []
     mod_features = read_mod_features(args.mod_features) if args.mod_features else []
@@ -190,7 +173,7 @@ def main():
         # New features: all selected versions. Fixes and improvements: the version itself only.
         sections = selected if index == 0 else [s for s in selected if s["version"] == version]
         items = [item for s in sections if index in s["groups"]
-                 for item in newest_first(s["groups"][index], dates)]
+                 for item in s["groups"][index]]
         if index == 0:
             items += extra_features
         if index == FIX_GROUP:

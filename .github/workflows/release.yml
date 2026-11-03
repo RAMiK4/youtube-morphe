@@ -88,8 +88,6 @@ jobs:
           repository: ${{ env.PATCHES_REPO }}
           ref: ${{ env.PATCHES_TAG }}
           path: patches-src
-          # Full history: the release notes list the changes by the date of their commit
-          fetch-depth: 0
 
       - name: Read patches version
         if: ${{ inputs.patches_source != '' }}
@@ -101,13 +99,17 @@ jobs:
       - name: Generate changelog
         run: |
           # YouTube part of the Morphe changelog: a stable version lists its own section,
-          # a dev version the new features of itself and the previous dev, and its own fixes
-          # followed by the fixes of the mod (notes/mod-fixes.md). Newest change first.
-          git -C patches-src log --format='%H %ct' > "$RUNNER_TEMP/commit-dates.txt"
+          # a dev version the new features of itself (and of the previous dev if that one was
+          # not released here), and its own fixes followed by the fixes of the mod
+          # (notes/mod-fixes.md). Changes keep the order of the Morphe changelog.
+          # Patches versions that already have a release: tags v<yt>-p<patches>-b<build>
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 200 --json tagName -q '.[].tagName' \
+            | sed -n 's/^v[^-]*-p\(.*\)-b[0-9]*$/\1/p' > "$RUNNER_TEMP/released.txt"
+          echo "Released patches versions: $(tr '\n' ' ' < "$RUNNER_TEMP/released.txt")"
           python3 -I scripts/changelog.py patches-src/CHANGELOG.md "$PATCHES_VER" \
             "$RUNNER_TEMP/changes.md" "$RUNNER_TEMP/changes.txt" \
             --mod-features notes/mod-features.md --mod-fixes notes/mod-fixes.md \
-            --extra-features notes/extra-features.md --dates "$RUNNER_TEMP/commit-dates.txt"
+            --extra-features notes/extra-features.md --released "$RUNNER_TEMP/released.txt"
           cat "$RUNNER_TEMP/changes.txt"
 
       - name: Setup Gradle
