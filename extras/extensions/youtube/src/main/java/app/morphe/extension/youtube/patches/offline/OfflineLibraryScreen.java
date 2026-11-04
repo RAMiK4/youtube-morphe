@@ -12,32 +12,41 @@ package app.morphe.extension.youtube.patches.offline;
 
 import static app.morphe.extension.shared.StringRef.str;
 
-import android.app.AlertDialog;
+import android.app.Dialog;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.text.TextUtils;
 import android.text.format.Formatter;
+import android.text.InputType;
 import android.util.LruCache;
 import android.util.TypedValue;
+import android.util.Pair;
+import android.view.CollapsibleActionView;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.BaseAdapter;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.EditText;
 import android.widget.ProgressBar;
-import android.widget.SearchView;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toolbar;
 
@@ -48,7 +57,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.IntConsumer;
 
+import app.morphe.extension.shared.ui.CustomDialog;
 import app.morphe.extension.shared.Logger;
 import app.morphe.extension.shared.Utils;
 import app.morphe.extension.shared.theme.ThemeUtils;
@@ -81,7 +92,7 @@ final class OfflineLibraryScreen implements OfflineScreens.Screen {
     private final int secondary;
     private final Adapter adapter = new Adapter();
     private final TextView emptyView;
-    private final SearchView searchView;
+    private final LibrarySearchView searchView;
     private final MenuItem searchItem;
     private final MenuItem cancelAllItem;
 
@@ -113,6 +124,8 @@ final class OfflineLibraryScreen implements OfflineScreens.Screen {
                 ? ResourceUtils.getColor("yt_black3", Color.BLACK)
                 : ResourceUtils.getColor("yt_white1", Color.WHITE));
         toolbar.setNavigationIcon(ToolbarPreferenceFragment.getBackButtonDrawable());
+        toolbar.setCollapseIcon(ToolbarPreferenceFragment.getBackButtonDrawable());
+        tintToolbarOverflowIcon(toolbar);
         toolbar.setNavigationContentDescription(str("morphe_settings_navigate_up"));
         toolbar.setNavigationOnClickListener(v -> activity.finish());
         // The Toolbar's own title view sits lower than the back arrow when the theme gives it
@@ -136,24 +149,7 @@ final class OfflineLibraryScreen implements OfflineScreens.Screen {
                 : Dim.dp(56);
         root.addView(toolbar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, toolbarHeight));
 
-        searchView = new SearchView(activity);
-        searchView.setQueryHint(str("morphe_offline_library_search"));
-        searchView.setMaxWidth(Integer.MAX_VALUE);
-        tintSearchView(searchView);
-        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-            @Override
-            public boolean onQueryTextSubmit(String text) {
-                searchView.clearFocus();
-                return true;
-            }
-
-            @Override
-            public boolean onQueryTextChange(String text) {
-                query = text == null ? "" : text.trim().toLowerCase(Locale.ROOT);
-                reload();
-                return true;
-            }
-        });
+        searchView = new LibrarySearchView();
 
         Menu menu = toolbar.getMenu();
         searchItem = menu.add(str("morphe_offline_library_search"));
@@ -168,7 +164,7 @@ final class OfflineLibraryScreen implements OfflineScreens.Screen {
 
             @Override
             public boolean onMenuItemActionCollapse(MenuItem item) {
-                searchView.setQuery("", false);
+                searchView.input.setText("");
                 return true;
             }
         });
@@ -232,6 +228,15 @@ final class OfflineLibraryScreen implements OfflineScreens.Screen {
         verifyFiles();
     }
 
+    private void tintToolbarOverflowIcon(Toolbar toolbar) {
+        Drawable overflowIcon = toolbar.getOverflowIcon();
+        if (overflowIcon != null) {
+            overflowIcon = overflowIcon.mutate();
+            overflowIcon.setTint(foreground);
+            toolbar.setOverflowIcon(overflowIcon);
+        }
+    }
+
     private void showSortDialog() {
         String[] labels = new String[SORTS.length];
         for (int i = 0; i < SORTS.length; i++) {
@@ -242,23 +247,137 @@ final class OfflineLibraryScreen implements OfflineScreens.Screen {
         for (int i = 0; i < SORTS.length; i++) {
             if (SORTS[i].equals(currentSort)) selected = i;
         }
-        OfflineUi.showChoices(activity, str("morphe_offline_library_sort"), labels, selected, foreground, which -> {
+        showLibraryChoices(str("morphe_offline_library_sort"), labels, selected, which -> {
             SaveToDeviceSettings.LIBRARY_SORT.save(SORTS[which]);
             reload();
         });
     }
 
-    private void tintSearchView(SearchView view) {
-        try {
-            int id = activity.getResources().getIdentifier("android:id/search_src_text", null, null);
-            TextView text = view.findViewById(id);
-            if (text != null) {
-                text.setTextColor(foreground);
-                text.setHintTextColor(secondary);
-            }
-        } catch (Exception ex) {
-            Logger.printDebug(() -> "Could not tint the search view", ex);
+    /** A plain input avoids the platform SearchView's underline and magnifier inside its hint. */
+    private final class LibrarySearchView extends FrameLayout implements CollapsibleActionView {
+        private final EditText input;
+
+        LibrarySearchView() {
+            super(activity);
+            setPaddingRelative(0, 0, Dim.dp(8), 0);
+
+            input = new EditText(activity);
+            input.setSingleLine();
+            input.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+            input.setTextColor(foreground);
+            input.setHintTextColor(secondary);
+            input.setHint(str("morphe_offline_library_search"));
+            input.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
+            input.setInputType(InputType.TYPE_CLASS_TEXT);
+            input.setPaddingRelative(Dim.dp(16), 0, Dim.dp(16), 0);
+            input.setGravity(Gravity.CENTER_VERTICAL);
+
+            GradientDrawable pill = new GradientDrawable();
+            pill.setCornerRadius(Dim.dp(20));
+            pill.setColor(Utils.adjustColorBrightness(
+                    ThemeUtils.getAppBackgroundColor(), 0.95f, 1.18f));
+            input.setBackground(pill);
+            addView(input, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, Dim.dp(40), Gravity.CENTER_VERTICAL));
+
+            input.setOnEditorActionListener((view, action, event) -> {
+                hideKeyboard();
+                input.clearFocus();
+                return true;
+            });
+            input.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence text, int start, int count, int after) {
+                }
+
+                @Override
+                public void onTextChanged(CharSequence text, int start, int before, int count) {
+                    query = text.toString().trim().toLowerCase(Locale.ROOT);
+                    reload();
+                }
+
+                @Override
+                public void afterTextChanged(Editable text) {
+                }
+            });
         }
+
+        private void hideKeyboard() {
+            InputMethodManager keyboard = activity.getSystemService(InputMethodManager.class);
+            keyboard.hideSoftInputFromWindow(input.getWindowToken(), 0);
+        }
+
+        @Override
+        public void onActionViewExpanded() {
+            // Toolbar replaces the action view's LayoutParams with WRAP_CONTENT during expansion.
+            // Keep its expanded-view metadata, but fill the space between collapse and overflow.
+            ViewGroup.LayoutParams layoutParams = getLayoutParams();
+            layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT;
+            layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT;
+            setLayoutParams(layoutParams);
+
+            input.requestFocus();
+            input.post(() -> activity.getSystemService(InputMethodManager.class)
+                    .showSoftInput(input, InputMethodManager.SHOW_IMPLICIT));
+        }
+
+        @Override
+        public void onActionViewCollapsed() {
+            hideKeyboard();
+            input.clearFocus();
+        }
+    }
+
+    /** Uses the settings dialog layout, but keeps even AMOLED surfaces equal to the library background. */
+    private Pair<Dialog, LinearLayout> createLibraryDialog(String title, @Nullable String message,
+                                                          @Nullable EditText input, @Nullable Runnable onConfirm) {
+        Pair<Dialog, LinearLayout> dialog = CustomDialog.create(
+                activity, title, message, input, null, onConfirm,
+                onConfirm == null ? null : () -> {}, null, null, true);
+        dialog.second.getBackground().mutate().setTint(ThemeUtils.getAppBackgroundColor());
+        if (input != null && message != null) {
+            TextView description = text(16, foreground, Integer.MAX_VALUE);
+            description.setText(message);
+            description.setPadding(0, 0, 0, Dim.dp(16));
+            dialog.second.addView(description, 1);
+        }
+
+        return dialog;
+    }
+
+    private void showLibraryChoices(String title, String[] labels, int selected, IntConsumer onChosen) {
+        Pair<Dialog, LinearLayout> dialog = createLibraryDialog(title, null, null, null);
+        LinearLayout choices = new LinearLayout(activity);
+        choices.setOrientation(LinearLayout.VERTICAL);
+
+        for (int index = 0; index < labels.length; index++) {
+            final int choice = index;
+            TextView row = text(16, foreground, 2);
+            row.setText(labels[index]);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setMinHeight(Dim.dp(52));
+            row.setPaddingRelative(Dim.dp(8), 0, Dim.dp(8), 0);
+            TypedValue selectable = new TypedValue();
+            activity.getTheme().resolveAttribute(android.R.attr.selectableItemBackground, selectable, true);
+            row.setBackgroundResource(selectable.resourceId);
+            if (index == selected) {
+                row.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                        null, null, OfflineUi.icon(activity, "check", foreground), null);
+                row.setCompoundDrawablePadding(Dim.dp(16));
+            }
+            row.setOnClickListener(view -> {
+                dialog.first.dismiss();
+                onChosen.accept(choice);
+            });
+            choices.addView(row, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        }
+
+        ScrollView scroll = new ScrollView(activity);
+        scroll.addView(choices);
+        dialog.second.addView(scroll, 1, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        dialog.first.show();
     }
 
     // region data
@@ -309,22 +428,19 @@ final class OfflineLibraryScreen implements OfflineScreens.Screen {
                 str("morphe_offline_action_open_youtube"),
                 str("morphe_offline_action_delete"),
         };
-        new AlertDialog.Builder(activity)
-                .setTitle(video.title)
-                .setItems(actions, (dialog, which) -> {
-                    switch (which) {
-                        case 0 -> {
-                            OfflinePlayer.play(video, OfflineScreens.order());
-                            Utils.showToastShort(str("morphe_offline_playing_background"));
-                        }
-                        case 1 -> share(video);
-                        case 2 -> openOnYouTube(video);
-                        case 3 -> confirmDelete(video);
-                        default -> {
-                        }
-                    }
-                })
-                .show();
+        showLibraryChoices(video.title, actions, -1, which -> {
+            switch (which) {
+                case 0 -> {
+                    OfflinePlayer.play(video, OfflineScreens.order());
+                    Utils.showToastShort(str("morphe_offline_playing_background"));
+                }
+                case 1 -> share(video);
+                case 2 -> openOnYouTube(video);
+                case 3 -> confirmDelete(video);
+                default -> {
+                }
+            }
+        });
     }
 
     private void share(OfflineVideo video) {
@@ -358,10 +474,8 @@ final class OfflineLibraryScreen implements OfflineScreens.Screen {
     }
 
     private void confirmDelete(OfflineVideo video) {
-        new AlertDialog.Builder(activity)
-                .setTitle(str("morphe_offline_delete_title"))
-                .setMessage(str("morphe_offline_delete_message", video.title))
-                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+        createLibraryDialog(str("morphe_offline_delete_title"),
+                str("morphe_offline_delete_message", video.title), null, () -> {
                     OfflinePlayer.closeIfPlaying(video.key());
                     if (OfflineMediaStore.delete(activity, video.contentUri)) {
                         Logger.printInfo(() -> "Deleted " + video.key());
@@ -369,20 +483,14 @@ final class OfflineLibraryScreen implements OfflineScreens.Screen {
                     }
                     // Otherwise the system asks for consent, and the next resume drops the entry
                     // if the user agreed.
-                })
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
+                }).first.show();
     }
 
     private void confirmCancelAll() {
-        new AlertDialog.Builder(activity)
-                .setTitle(str("morphe_offline_cancel_all"))
-                .setMessage(str("morphe_offline_cancel_all_message", OfflineDownloader.getTasks().size()))
-                .setPositiveButton(android.R.string.ok, (dialog, which) -> OfflineDownloader.cancelAll(false))
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
+        createLibraryDialog(str("morphe_offline_cancel_all"),
+                str("morphe_offline_cancel_all_message", OfflineDownloader.getTasks().size()),
+                null, () -> OfflineDownloader.cancelAll(false)).first.show();
     }
-
     // endregion
 
     // region lifecycle

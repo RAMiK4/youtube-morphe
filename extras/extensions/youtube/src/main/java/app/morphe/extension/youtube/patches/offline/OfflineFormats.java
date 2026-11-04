@@ -127,7 +127,7 @@ final class OfflineFormats {
     record Resolved(String videoId, int clientIndex, @Nullable String userAgent, @Nullable String hlsUserAgent,
                     String title, String author, String channelId, long lengthMs,
                     @Nullable String thumbnailUrl, List<Stream> videos, @Nullable Stream audio,
-                    @Nullable Stream webmAudio) {
+                    @Nullable Stream webmAudio, OfflineCaptions.Catalog captions) {
         /** The audio stream that goes with {@code video}: Opus for WebM, AAC for MP4. */
         Stream audioFor(Stream video) {
             return video.isVp9() ? webmAudio : audio;
@@ -157,7 +157,7 @@ final class OfflineFormats {
             List<Stream> all = new ArrayList<>(videos);
             all.add(premium);
             return new Resolved(videoId, clientIndex, userAgent, premiumUserAgent, title, author, channelId,
-                    lengthMs, thumbnailUrl, sorted(all), audio, webmAudio);
+                    lengthMs, thumbnailUrl, sorted(all), audio, webmAudio, captions);
         }
     }
 
@@ -169,10 +169,11 @@ final class OfflineFormats {
      * Requests the player response from each client starting at {@code firstClient}.
      *
      * @param withPremium Also look for the 1080p Premium HLS stream, which takes an extra request.
+     * @param withCaptions Fetch missing caption metadata for the picker or selected subtitle downloads, not playlists.
      * @return The first usable answer, or null if no client has a downloadable video stream.
      */
     @Nullable
-    static Resolved resolve(String videoId, int firstClient, boolean withPremium) {
+    static Resolved resolve(String videoId, int firstClient, boolean withPremium, boolean withCaptions) {
         for (int index = Math.max(0, firstClient); index < DOWNLOAD_CLIENTS.size(); index++) {
             ClientType client = DOWNLOAD_CLIENTS.get(index);
             final int clientIndex = index;
@@ -186,7 +187,7 @@ final class OfflineFormats {
                     continue;
                 }
                 DownloadPlayerResponse response = DownloadPlayerResponse.parseFrom(stream.streamingData());
-                Resolved resolved = parse(videoId, clientIndex, client.userAgent, response);
+                Resolved resolved = parse(videoId, clientIndex, client.userAgent, response, withCaptions);
                 if (resolved != null) {
                     Logger.printInfo(() -> "Resolved " + videoId + " with client " + client.name()
                             + ": " + resolved.videos().size() + " video streams");
@@ -209,7 +210,7 @@ final class OfflineFormats {
 
     @Nullable
     private static Resolved parse(String videoId, int clientIndex, @Nullable String userAgent,
-                                  DownloadPlayerResponse response) {
+                                  DownloadPlayerResponse response, boolean withCaptions) {
         // One stream per quality and codec. The largest file of a quality is the best encode.
         Map<String, Stream> videos = new LinkedHashMap<>();
         BestAudio aac = new BestAudio();
@@ -242,7 +243,7 @@ final class OfflineFormats {
 
         return new Resolved(videoId, clientIndex, userAgent, null, title, details.getOwnerChannelName(),
                 details.getChannelId(), lengthMs, largestThumbnail(details), sorted(videos.values()),
-                aac.best, opus.best);
+                aac.best, opus.best, OfflineCaptions.resolve(videoId, response, withCaptions));
     }
 
     /** @return Null for codecs and containers the downloader does not save, and for HDR VP9. */

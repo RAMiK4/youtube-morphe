@@ -11,7 +11,42 @@ option java_outer_classname = "SaveToDeviceResponse";
 
 message DownloadPlayerResponse {
   optional DownloadStreamingData streamingData = 4;
+  optional DownloadCaptions captions = 10;
   optional DownloadVideoDetails videoDetails = 11;
+}
+
+// The caption tracks offered for subtitle downloads.
+message DownloadCaptions {
+  optional DownloadCaptionTrackList playerCaptionsTracklistRenderer = 51621377;
+}
+
+message DownloadCaptionTrackList {
+  repeated DownloadCaptionTrack captionTracks = 1;
+  repeated DownloadCaptionTranslationLanguage translationLanguages = 3;
+  repeated int32 defaultTranslationSourceTrackIndices = 6;
+}
+
+message DownloadCaptionText {
+  repeated DownloadCaptionTextRun runs = 1;
+}
+
+message DownloadCaptionTextRun {
+  optional string text = 1;
+}
+
+message DownloadCaptionTrack {
+  optional string baseUrl = 1;
+  optional DownloadCaptionText name = 2;
+  optional string vssId = 3;
+  optional string languageCode = 4;
+  optional string kind = 5;
+  optional bool isTranslatable = 7;
+}
+
+message DownloadCaptionTranslationLanguage {
+  optional string languageCode = 1;
+  optional DownloadCaptionText languageName = 2;
+  repeated int32 translationSourceTrackIndices = 3;
 }
 
 message DownloadVideoDetails {

@@ -32,7 +32,8 @@
     <string name="morphe_offline_loading_formats">Kalite seçenekleri yükleniyor…</string>
     <string name="morphe_offline_picker_subtitle">İndirme kalitesi</string>
     <string name="morphe_offline_picker_footer">"Videolar %1$s klasörüne kaydedilir
-Sesler %2$s klasörüne kaydedilir"</string>
+Sesler %2$s klasörüne kaydedilir
+Seçilen altyazılar %3$s klasörüne kaydedilir"</string>
     <string name="morphe_offline_picker_h264_hint">Her yerde oynar</string>
     <string name="morphe_offline_picker_av1_hint">Daha küçük dosya</string>
     <string name="morphe_offline_picker_vp9_hint">Opus sesli WebM</string>
@@ -118,6 +119,8 @@ Sesler %2$s klasörüne kaydedilir"</string>
     <string name="morphe_offline_audio_folder_summary">İndirilen sesler için Download içindeki klasör</string>
     <string name="morphe_offline_thumbnail_folder_title">Küçük resim klasörü</string>
     <string name="morphe_offline_thumbnail_folder_summary">Kaydedilen küçük resimler için Download içindeki klasör</string>
+    <string name="morphe_offline_subtitle_folder_title">Altyazı klasörü</string>
+    <string name="morphe_offline_subtitle_folder_summary">İndirilen altyazılar için Download içindeki klasör</string>
     <string name="morphe_offline_save_thumbnail_title">İndirmelerle küçük resmi kaydet</string>
     <string name="morphe_offline_save_thumbnail_summary_on">Her indirme, videonun küçük resmini de küçük resim klasörüne kaydeder</string>
     <string name="morphe_offline_save_thumbnail_summary_off">Yalnızca indirilen video veya ses kaydedilir</string>
@@ -144,3 +147,48 @@ Sesler %2$s klasörüne kaydedilir"</string>
     <string name="morphe_offline_aspect_stretch">Uzat</string>
     <string name="morphe_offline_aspect_zoom">Yakınlaştır</string>
     <string name="morphe_offline_aspect_original">Orijinal boyut</string>
+    <string name="morphe_offline_subtitles_include">Altyazıları ekle</string>
+    <string name="morphe_offline_subtitles_none">İndirilecek altyazı yok</string>
+    <string name="morphe_offline_subtitles_languages">Diller (%1$d/%2$d seçili)</string>
+    <string name="morphe_offline_subtitles_languages_title">Altyazı dilleri</string>
+    <string name="morphe_offline_subtitles_translated">Otomatik çeviri</string>
+    <string name="morphe_offline_subtitles_cap">En fazla %d altyazı parçası seçin</string>
+    <string name="morphe_offline_subtitles_format">Biçim: %s</string>
+    <string name="morphe_offline_subtitles_format_title">Altyazı biçimi</string>
+    <string name="morphe_offline_subtitles_style">Altyazı stili</string>
+    <string name="morphe_offline_subtitles_limited">Video kaydedildi. YouTube %s altyazılarını sınırladı, diğer parçalar atlandı</string>
+    <string name="morphe_offline_subtitles_failed">Video kaydedildi. %s altyazıları indirilemedi</string>
+    <string name="morphe_offline_subtitles_preparing">Altyazılar kaydediliyor (otomatik çeviri yaklaşık bir dakika sürebilir)…</string>
+    <string name="morphe_offline_subtitles_delete_failed">Bir altyazı dosyası silinemedi</string>
+    <string name="morphe_offline_subtitles_cc">Altyazılar</string>
+    <string name="morphe_offline_subtitles_off">Kapalı</string>
+    <string name="morphe_offline_subtitles_size">Boyut</string>
+    <string name="morphe_offline_subtitles_colour">Renk</string>
+    <string name="morphe_offline_subtitles_background">Arka plan opaklığı</string>
+    <string name="morphe_offline_subtitles_position">Konum</string>
+    <string name="morphe_offline_subtitles_small">Küçük</string>
+    <string name="morphe_offline_subtitles_medium">Orta</string>
+    <string name="morphe_offline_subtitles_large">Büyük</string>
+    <string name="morphe_offline_subtitles_extra_large">Çok büyük</string>
+    <string name="morphe_offline_subtitles_white">Beyaz</string>
+    <string name="morphe_offline_subtitles_yellow">Sarı</string>
+    <string name="morphe_offline_subtitles_cyan">Camgöbeği</string>
+    <string name="morphe_offline_subtitles_green">Yeşil</string>
+    <string name="morphe_offline_subtitles_bottom">Alt</string>
+    <string name="morphe_offline_subtitles_middle">Orta</string>
+    <string name="morphe_offline_subtitles_top">Üst</string>
+    <string name="morphe_offline_subtitles_custom">Özel…</string>
+    <string name="morphe_offline_subtitles_custom_colour">Özel (%s)</string>
+    <string name="morphe_offline_subtitles_custom_colour_title">Özel altyazı rengi</string>
+    <string name="morphe_offline_subtitles_vertical_position">Dikey konum (merkezin üstten uzaklığı)</string>
+    <string name="morphe_offline_subtitles_percentage">%1$s · %2$d%%</string>
+    <string name="morphe_offline_subtitles_done">Bitti</string>
+    <string name="morphe_offline_subtitles_preview">Altyazı görünümü önizlemesi</string>
+    <string name="morphe_offline_subtitles_font">Yazı tipi</string>
+    <string name="morphe_offline_subtitles_font_default">Varsayılan (sans-serif)</string>
+    <string name="morphe_offline_subtitles_font_medium">Sans-serif medium</string>
+    <string name="morphe_offline_subtitles_font_condensed">Dar</string>
+    <string name="morphe_offline_subtitles_font_serif">Serif</string>
+    <string name="morphe_offline_subtitles_font_monospace">Eş aralıklı</string>
+    <string name="morphe_offline_subtitles_font_casual">Casual</string>
+    <string name="morphe_offline_subtitles_font_cursive">El yazısı</string>

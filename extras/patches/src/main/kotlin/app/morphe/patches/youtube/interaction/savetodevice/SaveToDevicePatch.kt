@@ -130,6 +130,7 @@ private val saveToDeviceResourcePatch = resourcePatch {
                                     TextPreference("morphe_offline_video_folder"),
                                     TextPreference("morphe_offline_audio_folder"),
                                     TextPreference("morphe_offline_thumbnail_folder"),
+                                    TextPreference("morphe_offline_subtitle_folder"),
                                 )
                             ),
                             PreferenceCategory(

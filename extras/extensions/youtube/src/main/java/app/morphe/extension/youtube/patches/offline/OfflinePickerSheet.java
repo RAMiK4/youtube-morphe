@@ -229,6 +229,7 @@ final class OfflinePickerSheet {
         };
         LinearLayout list = new LinearLayout(activity);
         list.setOrientation(LinearLayout.VERTICAL);
+        OfflineSubtitlePicker.add(activity, list, resolved.captions(), foreground);
         addVideoSection(list, resolved, video -> once.accept(() -> onPick.accept(video)));
         addAudioSection(list, resolved, audio -> once.accept(() -> onPick.accept(audio)));
         addThumbnailSection(list, () -> once.accept(onThumbnail));
@@ -242,7 +243,8 @@ final class OfflinePickerSheet {
 
         addFooter(root, str("morphe_offline_picker_footer",
                 OfflineMediaStore.Collection.VIDEO.relativePath(OfflineOptions.videoFolder()),
-                OfflineMediaStore.Collection.AUDIO.relativePath(OfflineOptions.audioFolder())));
+                OfflineMediaStore.Collection.AUDIO.relativePath(OfflineOptions.audioFolder()),
+                OfflineMediaStore.Collection.SUBTITLE.relativePath(OfflineOptions.subtitleFolder())));
     }
 
     private void showDetails(OfflineFormats.Resolved resolved) {
