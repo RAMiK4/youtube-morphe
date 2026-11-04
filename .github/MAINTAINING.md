@@ -18,6 +18,7 @@ The changelog is generated from the Morphe changelog (YouTube only), newest firs
 
 - An empty line after each `[spoiler=...]` title
 - No "test version" note next to dev patches versions, users could misread it
+- What's new lists only the changes: the YouTube and patches versions are already at the top of the post
 - An empty line after the `YouTube Morphe PRO Settings` title, where the settings file `YT_Morphe_PRO_Settings_v<patches version>.txt` of the release is attached
 
 ## Configuration
