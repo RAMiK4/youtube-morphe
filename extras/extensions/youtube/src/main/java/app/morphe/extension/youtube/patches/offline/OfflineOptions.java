@@ -126,6 +126,11 @@ final class OfflineOptions {
         return folder(SaveToDeviceSettings.THUMBNAIL_FOLDER);
     }
 
+    /** Below {@code Download}. */
+    static String subtitleFolder() {
+        return folder(SaveToDeviceSettings.SUBTITLE_FOLDER);
+    }
+
     private static String folder(StringSetting setting) {
         String folder = sanitizeFolder(setting.get());
         return folder.isEmpty() ? sanitizeFolder(setting.defaultValue) : folder;

@@ -102,6 +102,8 @@ public final class OfflineDownloader {
         volatile boolean transferStopped;
         volatile long total;
         volatile State state = State.QUEUED;
+        @Nullable
+        volatile String subtitleStatus;
         volatile boolean cancelled;
         volatile boolean timedOut;
         @Nullable
@@ -110,6 +112,7 @@ public final class OfflineDownloader {
         volatile OfflineFormats.Resolved resolved;
         /** The video stream, or the audio stream of an audio-only download. */
         volatile OfflineFormats.Stream stream;
+        final OfflineCaptions.Selection subtitles;
 
         Task(OfflineFormats.Resolved resolved, OfflineFormats.Stream stream) {
             this.key = OfflineVideo.keyOf(resolved.videoId(), stream.isAudioOnly());
@@ -120,6 +123,7 @@ public final class OfflineDownloader {
             this.stream = stream;
             this.index = 0;
             this.batch = null;
+            this.subtitles = stream.isAudioOnly() ? OfflineCaptions.Selection.none() : resolved.captions().selection();
         }
 
         /** A playlist entry. Stream urls expire, so the stream is chosen when the task starts. */
@@ -130,10 +134,16 @@ public final class OfflineDownloader {
             this.qualityLabel = "";
             this.index = index;
             this.batch = batch;
+            this.subtitles = OfflineCaptions.Selection.none();
         }
 
         State getState() {
             return state;
+        }
+
+        void preparingTranslatedSubtitles() {
+            subtitleStatus = str("morphe_offline_subtitles_preparing");
+            notifyChanged(true);
         }
 
         /** @return 0-100 without retreating during fallback, or -1 until a size is known. */
@@ -247,7 +257,7 @@ public final class OfflineDownloader {
 
         Utils.runOnBackgroundThread(() -> {
             final Set<String> savedKeys = savedKeys(videoId);
-            final OfflineFormats.Resolved resolved = OfflineFormats.resolve(videoId, 0, true);
+            final OfflineFormats.Resolved resolved = OfflineFormats.resolve(videoId, 0, true, true);
             Utils.runOnMainThread(() -> {
                 if (!settled.compareAndSet(false, true)) return; // The user cancelled.
                 resolving.remove(videoId);
@@ -397,7 +407,10 @@ public final class OfflineDownloader {
         }
         if (task == null) return;
         Logger.printInfo(() -> "Cancelling download " + key);
-        task.cancelled = true;
+        synchronized (task) {
+            task.cancelled = true;
+            task.notifyAll();
+        }
         // Cancellation must unblock socket reads, not wait for their timeout.
         stopTransfer(task);
         if (task.state == State.QUEUED) {
@@ -512,6 +525,7 @@ public final class OfflineDownloader {
             OfflineVideo saved = task.stream.isAudioOnly()
                     ? saveAudio(context, task, files[0])
                     : saveVideo(context, task, files[0], files[1]);
+            OfflineCaptions.download(context, saved, task);
             OfflineIndex.put(saved);
             if (OfflineOptions.saveThumbnailWithDownloads()) saveThumbnailCopy(context, task);
 
@@ -552,7 +566,7 @@ public final class OfflineDownloader {
 
     /** A playlist entry: its formats are resolved now, since stream urls expire within hours. */
     private static void chooseBatchStream(Task task) throws IOException {
-        OfflineFormats.Resolved resolved = OfflineFormats.resolve(task.videoId, 0, false);
+        OfflineFormats.Resolved resolved = OfflineFormats.resolve(task.videoId, 0, false, false);
         checkCancelled(task);
         if (resolved == null) throw new IOException(str("morphe_offline_no_formats"));
 
@@ -579,7 +593,8 @@ public final class OfflineDownloader {
                 final OfflineFormats.Stream stream = task.stream;
                 final int next = task.resolved.clientIndex() + 1;
                 final OfflineFormats.Resolved other = next < OfflineFormats.clientCount()
-                        ? OfflineFormats.resolve(task.videoId, next, stream.premium() && stream.hls())
+                        ? OfflineFormats.resolve(task.videoId, next, stream.premium() && stream.hls(),
+                                !task.subtitles.tracks().isEmpty())
                         : null;
                 final OfflineFormats.Stream match = other == null ? null : other.find(stream.key());
                 if (match == null) throw ex;

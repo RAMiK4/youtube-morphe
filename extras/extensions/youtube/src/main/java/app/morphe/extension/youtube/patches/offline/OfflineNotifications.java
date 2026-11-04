@@ -91,7 +91,7 @@ final class OfflineNotifications {
         }
 
         int percent = task.getPercent();
-        String text = switch (task.getState()) {
+        String text = task.subtitleStatus != null ? task.subtitleStatus : switch (task.getState()) {
             case MERGING -> str("morphe_offline_download_merging");
             case SAVING -> str("morphe_offline_download_saving");
             case QUEUED -> str("morphe_offline_download_queued");

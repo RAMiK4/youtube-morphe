@@ -12,6 +12,7 @@ package app.morphe.extension.youtube.patches.offline;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
@@ -25,14 +26,20 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.util.Pair;
 
 import androidx.annotation.Nullable;
 
+import java.util.function.BiConsumer;
 import java.util.function.IntConsumer;
 
 import app.morphe.extension.shared.ResourceType;
 import app.morphe.extension.shared.ResourceUtils;
+import app.morphe.extension.shared.settings.preference.ColorPickerView;
+import app.morphe.extension.shared.ui.CustomDialog;
 import app.morphe.extension.shared.ui.Dim;
+
+import static app.morphe.extension.shared.StringRef.str;
 
 /**
  * Icons and dialogs shared by the offline library and player, drawn like YouTube's own screens.
@@ -60,8 +67,14 @@ final class OfflineUi {
      *
      * @param title Optional dialog title.
      */
-    static void showChoices(Activity activity, @Nullable String title, String[] labels, int selected,
-                            int foreground, IntConsumer onChosen) {
+    static AlertDialog showChoices(Activity activity, @Nullable String title, String[] labels, int selected,
+                                   int foreground, IntConsumer onChosen) {
+        return showChoices(activity, title, labels, selected, foreground, onChosen, null);
+    }
+
+    static AlertDialog showChoices(Activity activity, @Nullable String title, String[] labels, int selected,
+                                   int foreground, IntConsumer onChosen,
+                                   @Nullable BiConsumer<TextView, Integer> decorate) {
         final int padding = Dim.dp(24);
         final int checkSize = Dim.dp(24);
 
@@ -95,6 +108,7 @@ final class OfflineUi {
                 text.setText(labels[position]);
                 text.setTextColor(foreground);
                 text.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+                if (decorate != null) decorate.accept(text, position);
                 row.addView(text, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
                 ImageView check = new ImageView(activity);
@@ -116,6 +130,35 @@ final class OfflineUi {
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawable(dialogBackground(foreground));
         }
+        return dialog;
+    }
+
+    /**
+     * The RGB color picker of the Morphe settings, without a setting behind it.
+     *
+     * @param onApplied Called with the opaque color when OK is pressed.
+     * @param onDismiss Called when the dialog closes in any way.
+     */
+    static Dialog showRgbPicker(Context context, String title, int initialColor, int defaultColor,
+                                IntConsumer onApplied, Runnable onDismiss) {
+        ColorPickerView picker = new ColorPickerView(context);
+        picker.setOpacitySliderEnabled(false);
+        picker.setColor(initialColor | 0xFF000000);
+
+        Pair<Dialog, LinearLayout> dialog = CustomDialog.create(context, title, null, null, null,
+                () -> onApplied.accept(picker.getColor() | 0xFF000000),
+                () -> {
+                },
+                str("morphe_settings_reset_color"),
+                () -> picker.setColor(defaultColor | 0xFF000000),
+                false);
+        LinearLayout layout = dialog.second;
+        layout.addView(picker, layout.getChildCount() - 1, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        dialog.first.setOnDismissListener(ignored -> onDismiss.run());
+        dialog.first.setCanceledOnTouchOutside(false);
+        dialog.first.show();
+        return dialog.first;
     }
 
     private static Drawable dialogBackground(int foreground) {

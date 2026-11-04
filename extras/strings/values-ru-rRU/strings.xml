@@ -32,7 +32,8 @@
     <string name="morphe_offline_loading_formats">Загрузка доступного качества…</string>
     <string name="morphe_offline_picker_subtitle">Качество загрузки</string>
     <string name="morphe_offline_picker_footer">"Видео сохраняется в %1$s
-Аудио сохраняется в %2$s"</string>
+Аудио сохраняется в %2$s
+Выбранные субтитры сохраняются в %3$s"</string>
     <string name="morphe_offline_picker_h264_hint">Воспроизводится везде</string>
     <string name="morphe_offline_picker_av1_hint">Меньший размер</string>
     <string name="morphe_offline_picker_vp9_hint">WebM с аудио Opus</string>
@@ -118,6 +119,8 @@
     <string name="morphe_offline_audio_folder_summary">Папка внутри Download для загруженного аудио</string>
     <string name="morphe_offline_thumbnail_folder_title">Папка миниатюр</string>
     <string name="morphe_offline_thumbnail_folder_summary">Папка внутри Download для сохранённых миниатюр</string>
+    <string name="morphe_offline_subtitle_folder_title">Папка субтитров</string>
+    <string name="morphe_offline_subtitle_folder_summary">Папка внутри Download для загруженных субтитров</string>
     <string name="morphe_offline_save_thumbnail_title">Сохранять миниатюру с загрузками</string>
     <string name="morphe_offline_save_thumbnail_summary_on">Каждая загрузка также сохраняет миниатюру видео в папку миниатюр</string>
     <string name="morphe_offline_save_thumbnail_summary_off">Сохраняется только загруженное видео или аудио</string>
@@ -144,3 +147,48 @@
     <string name="morphe_offline_aspect_stretch">Растянуть</string>
     <string name="morphe_offline_aspect_zoom">Увеличить</string>
     <string name="morphe_offline_aspect_original">Исходный (100%)</string>
+    <string name="morphe_offline_subtitles_include">Добавить субтитры</string>
+    <string name="morphe_offline_subtitles_none">Нет субтитров для загрузки</string>
+    <string name="morphe_offline_subtitles_languages">Языки (выбрано %1$d из %2$d)</string>
+    <string name="morphe_offline_subtitles_languages_title">Языки субтитров</string>
+    <string name="morphe_offline_subtitles_translated">Автоперевод</string>
+    <string name="morphe_offline_subtitles_cap">Можно выбрать до %d дорожек субтитров</string>
+    <string name="morphe_offline_subtitles_format">Формат: %s</string>
+    <string name="morphe_offline_subtitles_format_title">Формат субтитров</string>
+    <string name="morphe_offline_subtitles_style">Стиль субтитров</string>
+    <string name="morphe_offline_subtitles_limited">Видео сохранено. YouTube ограничил субтитры (%s), остальные дорожки пропущены</string>
+    <string name="morphe_offline_subtitles_failed">Видео сохранено. Не удалось загрузить субтитры (%s)</string>
+    <string name="morphe_offline_subtitles_preparing">Сохранение субтитров (автоперевод может занять около минуты)…</string>
+    <string name="morphe_offline_subtitles_delete_failed">Не удалось удалить файл субтитров</string>
+    <string name="morphe_offline_subtitles_cc">Субтитры</string>
+    <string name="morphe_offline_subtitles_off">Выкл.</string>
+    <string name="morphe_offline_subtitles_size">Размер</string>
+    <string name="morphe_offline_subtitles_colour">Цвет</string>
+    <string name="morphe_offline_subtitles_background">Непрозрачность фона</string>
+    <string name="morphe_offline_subtitles_position">Положение</string>
+    <string name="morphe_offline_subtitles_small">Маленький</string>
+    <string name="morphe_offline_subtitles_medium">Средний</string>
+    <string name="morphe_offline_subtitles_large">Большой</string>
+    <string name="morphe_offline_subtitles_extra_large">Очень большой</string>
+    <string name="morphe_offline_subtitles_white">Белый</string>
+    <string name="morphe_offline_subtitles_yellow">Жёлтый</string>
+    <string name="morphe_offline_subtitles_cyan">Голубой</string>
+    <string name="morphe_offline_subtitles_green">Зелёный</string>
+    <string name="morphe_offline_subtitles_bottom">Снизу</string>
+    <string name="morphe_offline_subtitles_middle">По центру</string>
+    <string name="morphe_offline_subtitles_top">Сверху</string>
+    <string name="morphe_offline_subtitles_custom">Свой…</string>
+    <string name="morphe_offline_subtitles_custom_colour">Свой (%s)</string>
+    <string name="morphe_offline_subtitles_custom_colour_title">Свой цвет субтитров</string>
+    <string name="morphe_offline_subtitles_vertical_position">Положение по вертикали (центр от верха)</string>
+    <string name="morphe_offline_subtitles_percentage">%1$s · %2$d%%</string>
+    <string name="morphe_offline_subtitles_done">Готово</string>
+    <string name="morphe_offline_subtitles_preview">Предпросмотр вида субтитров</string>
+    <string name="morphe_offline_subtitles_font">Шрифт</string>
+    <string name="morphe_offline_subtitles_font_default">По умолчанию (sans-serif)</string>
+    <string name="morphe_offline_subtitles_font_medium">Sans-serif medium</string>
+    <string name="morphe_offline_subtitles_font_condensed">Сжатый</string>
+    <string name="morphe_offline_subtitles_font_serif">С засечками</string>
+    <string name="morphe_offline_subtitles_font_monospace">Моноширинный</string>
+    <string name="morphe_offline_subtitles_font_casual">Casual</string>
+    <string name="morphe_offline_subtitles_font_cursive">Рукописный</string>

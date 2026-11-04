@@ -32,7 +32,8 @@
     <string name="morphe_offline_loading_formats">Loading available qualities…</string>
     <string name="morphe_offline_picker_subtitle">Download quality</string>
     <string name="morphe_offline_picker_footer">"Videos are saved to %1$s
-Audio is saved to %2$s"</string>
+Audio is saved to %2$s
+Subtitles, if chosen, are saved to %3$s"</string>
     <string name="morphe_offline_picker_h264_hint">Plays everywhere</string>
     <string name="morphe_offline_picker_av1_hint">Smaller file</string>
     <string name="morphe_offline_picker_vp9_hint">WebM with Opus audio</string>
@@ -118,6 +119,8 @@ Audio is saved to %2$s"</string>
     <string name="morphe_offline_audio_folder_summary">Folder inside Download for downloaded audio</string>
     <string name="morphe_offline_thumbnail_folder_title">Thumbnail folder</string>
     <string name="morphe_offline_thumbnail_folder_summary">Folder inside Download for saved thumbnails</string>
+    <string name="morphe_offline_subtitle_folder_title">Subtitle folder</string>
+    <string name="morphe_offline_subtitle_folder_summary">Folder inside Download for downloaded subtitles</string>
     <string name="morphe_offline_save_thumbnail_title">Save thumbnail with downloads</string>
     <string name="morphe_offline_save_thumbnail_summary_on">Every download also saves the thumbnail of the video to the thumbnail folder</string>
     <string name="morphe_offline_save_thumbnail_summary_off">Only the downloaded video or audio is saved</string>
@@ -155,3 +158,48 @@ Audio is saved to %2$s"</string>
     <string name="morphe_offline_batch_part_failed">%d failed</string>
     <string name="morphe_offline_batch_part_cancelled">%d cancelled</string>
     <string name="morphe_offline_batch_part_already_downloaded">%d already downloaded</string>
+    <string name="morphe_offline_subtitles_include">Include subtitles</string>
+    <string name="morphe_offline_subtitles_none">No subtitles to download</string>
+    <string name="morphe_offline_subtitles_languages">Languages (%1$d/%2$d selected)</string>
+    <string name="morphe_offline_subtitles_languages_title">Subtitle languages</string>
+    <string name="morphe_offline_subtitles_translated">Auto-translated</string>
+    <string name="morphe_offline_subtitles_cap">Choose up to %d subtitle tracks</string>
+    <string name="morphe_offline_subtitles_format">Format: %s</string>
+    <string name="morphe_offline_subtitles_format_title">Subtitle format</string>
+    <string name="morphe_offline_subtitles_style">Subtitle style</string>
+    <string name="morphe_offline_subtitles_limited">Video saved. YouTube limited the %s subtitles, the other tracks were skipped</string>
+    <string name="morphe_offline_subtitles_failed">Video saved. Could not download the %s subtitles</string>
+    <string name="morphe_offline_subtitles_preparing">Saving subtitles (auto-translation can take about a minute)…</string>
+    <string name="morphe_offline_subtitles_delete_failed">A subtitle file could not be deleted</string>
+    <string name="morphe_offline_subtitles_cc">Subtitles</string>
+    <string name="morphe_offline_subtitles_off">Off</string>
+    <string name="morphe_offline_subtitles_size">Size</string>
+    <string name="morphe_offline_subtitles_colour">Color</string>
+    <string name="morphe_offline_subtitles_background">Background opacity</string>
+    <string name="morphe_offline_subtitles_position">Position</string>
+    <string name="morphe_offline_subtitles_small">Small</string>
+    <string name="morphe_offline_subtitles_medium">Medium</string>
+    <string name="morphe_offline_subtitles_large">Large</string>
+    <string name="morphe_offline_subtitles_extra_large">Extra large</string>
+    <string name="morphe_offline_subtitles_white">White</string>
+    <string name="morphe_offline_subtitles_yellow">Yellow</string>
+    <string name="morphe_offline_subtitles_cyan">Cyan</string>
+    <string name="morphe_offline_subtitles_green">Green</string>
+    <string name="morphe_offline_subtitles_bottom">Bottom</string>
+    <string name="morphe_offline_subtitles_middle">Middle</string>
+    <string name="morphe_offline_subtitles_top">Top</string>
+    <string name="morphe_offline_subtitles_custom">Custom…</string>
+    <string name="morphe_offline_subtitles_custom_colour">Custom (%s)</string>
+    <string name="morphe_offline_subtitles_custom_colour_title">Custom subtitle color</string>
+    <string name="morphe_offline_subtitles_vertical_position">Vertical position (center from top)</string>
+    <string name="morphe_offline_subtitles_percentage">%1$s · %2$d%%</string>
+    <string name="morphe_offline_subtitles_done">Done</string>
+    <string name="morphe_offline_subtitles_preview">Subtitle appearance preview</string>
+    <string name="morphe_offline_subtitles_font">Font</string>
+    <string name="morphe_offline_subtitles_font_default">Default (sans-serif)</string>
+    <string name="morphe_offline_subtitles_font_medium">Sans-serif medium</string>
+    <string name="morphe_offline_subtitles_font_condensed">Condensed</string>
+    <string name="morphe_offline_subtitles_font_serif">Serif</string>
+    <string name="morphe_offline_subtitles_font_monospace">Monospace</string>
+    <string name="morphe_offline_subtitles_font_casual">Casual</string>
+    <string name="morphe_offline_subtitles_font_cursive">Cursive</string>

@@ -35,6 +35,19 @@ public final class SaveToDeviceSettings {
     public static final StringSetting ASPECT_MODE =
             new StringSetting("morphe_offline_aspect_mode", "FIT", false, false);
 
+    // Subtitles: the choices of the quality picker and the look in the offline player are remembered.
+    public static final BooleanSetting SUBTITLES_INCLUDE =
+            new BooleanSetting("morphe_offline_subtitles_include", FALSE, false, false);
+
+    public static final StringSetting SUBTITLES_LANGUAGES =
+            new StringSetting("morphe_offline_subtitles_languages", "", false, false);
+
+    public static final StringSetting SUBTITLES_FORMAT =
+            new StringSetting("morphe_offline_subtitles_format", "srt", false, false);
+
+    public static final StringSetting SUBTITLES_STYLE =
+            new StringSetting("morphe_offline_subtitles_style", "1,0,0,60,1,,v2,50,0,#FFFFFF", false, false);
+
     // Download options.
     public static final BooleanSetting CODEC_H264 =
             new BooleanSetting("morphe_offline_codec_h264", TRUE, parent(ENABLED));
@@ -68,6 +81,9 @@ public final class SaveToDeviceSettings {
 
     public static final StringSetting THUMBNAIL_FOLDER =
             new StringSetting("morphe_offline_thumbnail_folder", "YouTube/Thumbnails", parent(ENABLED));
+
+    public static final StringSetting SUBTITLE_FOLDER =
+            new StringSetting("morphe_offline_subtitle_folder", "YouTube/Subtitles", parent(ENABLED));
 
     public static final BooleanSetting SAVE_THUMBNAIL =
             new BooleanSetting("morphe_offline_save_thumbnail", FALSE, parent(ENABLED));
