@@ -28,7 +28,7 @@ The changes of each version are listed in the [releases](https://github.com/RAMi
 | Variant | Package | |
 |---|---|---|
 | **Amoled** | `app.morphe.android.youtube` | Material You and themes, pure black / white by default |
-| **Original** (BBK Clone) | `com.hiby.music` | Material You and themes, YouTube dark `#0F0F0F` / light `#F0F0F0` by default, plus BBK Dynamic Island (China ROMs: vivo, iQOO, OPPO, OnePlus) |
+| **Original** (BBK Clone) | `com.hiby.music` | Material You and themes, YouTube modern dark / soft light by default, plus BBK Dynamic Island for BBK cn devices |
 
 Both variants can be installed side by side. Theme colors can be changed at any time: *Morphe settings → General*.
 
