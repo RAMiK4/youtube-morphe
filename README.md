@@ -16,7 +16,7 @@ YouTube with all [Morphe](https://github.com/MorpheApp/morphe-patches) patches, 
 |---|---|
 | 🧩 **All Morphe patches for YouTube** | Built on the official Morphe patches, which are never modified |
 | 🗣️ **Google and Yandex voice-over translation** | Listen to videos in your language (VoT) |
-| ⬇️ **Video, audio, thumbnail and subtitle downloader with Save to device** | Download videos, audio (Opus / M4A), thumbnails and subtitles (SRT / VTT, also auto-translated) as files with a quality picker, and watch them offline with subtitles: *Morphe settings → Player → Save to device* |
+| ⬇️ **Video, audio, thumbnail and subtitle downloader with Save to device and offline SponsorBlock** | Download videos, audio (Opus / M4A), thumbnails and subtitles (SRT / VTT, also auto-translated) as files with a quality picker, and watch them offline with subtitles and SponsorBlock skipping: *Morphe settings → Player → Save to device* |
 | ⚙️ **Customizable preset settings** | A Premium-like experience from the first start. Your own changes are always kept |
 | 🏝️ **Extra clone variant** | Dynamic Island on supported devices |
 | 🔔 **In-app update check** | New builds are shown in the app: *Morphe settings → Updates* |

@@ -398,11 +398,12 @@ jobs:
             echo "::endgroup::"
           }
 
-          # Original: dark #0F0F0F as a custom color, so that the menus get it too (APP_DEFAULT keeps their own color),
-          # light #F0F0F0, text in the color of the other theme
+          # Original: dark #0F0F0F and light #F0F0F0 as custom colors, so that the menus get them too
+          # (APP_DEFAULT keeps their own color), text in the color of the other theme.
+          # Only the defaults change: all theme colors can still be picked in Morphe settings → General.
           build_variant hiby   "Original_Mod_BBK_Clone" "Original_Mod_BBK_Clone" \
             com.hiby.music true \
-            '{"darkDefault":"CUSTOM","lightDefault":"CUSTOM","lightCustomDefault":"#F0F0F0","changeForegroundDefault":true}'
+            '{"darkDefault":"CUSTOM","lightDefault":"CUSTOM","darkCustomDefault":"#0F0F0F","lightCustomDefault":"#F0F0F0","changeForegroundDefault":true}'
           # Amoled: black #000000 / white #FFFFFF (Morphe defaults)
           # Test builds (not published): only the clone variant, which is the one tested
           if [ "${{ inputs.publish }}" != "false" ] && [ -z "${{ inputs.patches_source }}" ]; then

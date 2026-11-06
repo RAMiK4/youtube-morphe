@@ -1,7 +1,7 @@
 <!-- Features of the mod, shown in the release notes and the in-app changelog under "🌟 Mod Features" and on the repository page. -->
 * All Morphe patches for YouTube
 * Google and Yandex voice-over translation (VoT)
-* Video, audio, thumbnail and subtitle downloader with Save to device
+* Video, audio, thumbnail and subtitle downloader with Save to device and offline SponsorBlock
 * Customizable preset settings for a Premium-like experience
 * Extra clone variant with Dynamic Island on supported devices
 * In-app update check for new builds
