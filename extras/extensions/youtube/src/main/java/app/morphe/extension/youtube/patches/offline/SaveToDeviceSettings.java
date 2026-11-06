@@ -38,6 +38,9 @@ public final class SaveToDeviceSettings {
     // Subtitles: the choices of the quality picker and the look in the offline player are remembered.
     public static final BooleanSetting SUBTITLES_INCLUDE =
             new BooleanSetting("morphe_offline_subtitles_include", FALSE, false, false);
+    // SponsorBlock segments saved with a download, skipped by the offline player.
+    public static final BooleanSetting SPONSORBLOCK_INCLUDE =
+            new BooleanSetting("morphe_offline_sponsorblock_include", FALSE, false, false);
 
     public static final StringSetting SUBTITLES_LANGUAGES =
             new StringSetting("morphe_offline_subtitles_languages", "", false, false);

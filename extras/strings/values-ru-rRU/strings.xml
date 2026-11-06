@@ -149,6 +149,11 @@
     <string name="morphe_offline_aspect_original">Исходный (100%)</string>
     <string name="morphe_offline_subtitles_include">Добавить субтитры</string>
     <string name="morphe_offline_subtitles_none">Нет субтитров для загрузки</string>
+    <string name="morphe_offline_sponsorblock_include">Добавить SponsorBlock</string>
+    <string name="morphe_offline_sponsorblock_summary">Пропускать выбранные сегменты в офлайн-плеере по настройкам категорий SponsorBlock</string>
+    <string name="morphe_offline_sponsorblock_loading">Проверка сегментов SponsorBlock…</string>
+    <string name="morphe_offline_sponsorblock_none">Для этого видео нет сегментов SponsorBlock</string>
+    <string name="morphe_offline_sponsorblock_error">Не удалось получить сегменты SponsorBlock</string>
     <string name="morphe_offline_subtitles_languages">Языки (выбрано %1$d из %2$d)</string>
     <string name="morphe_offline_subtitles_languages_title">Языки субтитров</string>
     <string name="morphe_offline_subtitles_translated">Автоперевод</string>

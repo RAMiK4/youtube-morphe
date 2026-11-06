@@ -7,6 +7,7 @@
    - `patches`: `stable` (latest stable Morphe release) or `dev` (latest dev release)
    - `publish`: unchecked builds a test APK into the run's *Artifacts* only
    - `update_preview` (test builds): the APK offers the latest release, to see the update dialog
+   - `r2_test` (test builds, with `update_preview`): the APK and its update info are uploaded to R2 as test files (`apk/test_*`, `updates/*-test.json`) and the APK checks those; the next published build removes them
 
 Every published build becomes the latest release. The workflow builds the official Morphe patches with the additions in `extras/`, applies them together with the latest YaVoT release (built from source with the fixes in `addons/yavot/`), verifies package name and signature, publishes the release (the two APKs, then `YT_Morphe_PRO_Settings_v<patches version>.txt` with the settings of `settings/defaults.json`) and updates `updates/*.json` for the in-app update check.
 
@@ -31,6 +32,12 @@ The changelog is generated from the Morphe changelog (YouTube only), newest firs
 
 Variant options (package, theme defaults) are set in `build_variant` calls of `.github/workflows/release.yml`.
 
+## Downloads (Cloudflare R2)
+
+When the variable `DL_BASE_URL` is set, published builds are also uploaded to the R2 bucket `R2_BUCKET`: the APKs to `apk/`, the update info to `updates/<variant>.json`. The apps check `DL_BASE_URL/updates/<variant>.json` and download the APK from `DL_BASE_URL/apk/`, so they no longer depend on GitHub. The APKs of the last 3 builds are kept. `cloudflare/worker.js` is the Worker (`cdn`) that serves the bucket (binding `BUCKET`, read only). `updates/*.json` in this repository stays up to date for builds that still check GitHub.
+
+The update address is built into each APK: `DL_BASE_URL` must not change, or the builds that use it stop getting updates.
+
 ## Secrets (Settings → Secrets and variables → Actions)
 
 | Name | Type | Value |
@@ -40,3 +47,8 @@ Variant options (package, theme defaults) are set in `build_variant` calls of `.
 | `KEY_ALIAS` | secret | Key alias (empty: `Morphe`) |
 | `KEY_PASSWORD` | secret | Key password (empty: `Morphe`) |
 | `CERT_SHA256` | variable | SHA-256 fingerprint of the signing certificate |
+| `R2_ACCOUNT_ID` | secret | Cloudflare account ID |
+| `R2_ACCESS_KEY_ID` | secret | R2 API token: access key ID (Object Read & Write, bucket only) |
+| `R2_SECRET_ACCESS_KEY` | secret | R2 API token: secret access key |
+| `R2_BUCKET` | variable | R2 bucket name |
+| `DL_BASE_URL` | variable | Address of the Worker, without a trailing slash |

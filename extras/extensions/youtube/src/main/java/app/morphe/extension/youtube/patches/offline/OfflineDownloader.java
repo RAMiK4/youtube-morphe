@@ -113,8 +113,9 @@ public final class OfflineDownloader {
         /** The video stream, or the audio stream of an audio-only download. */
         volatile OfflineFormats.Stream stream;
         final OfflineCaptions.Selection subtitles;
+        final OfflineSponsorBlock.Selection sponsor;
 
-        Task(OfflineFormats.Resolved resolved, OfflineFormats.Stream stream) {
+        Task(OfflineFormats.Resolved resolved, OfflineFormats.Stream stream, OfflineSponsorBlock.Selection sponsor) {
             this.key = OfflineVideo.keyOf(resolved.videoId(), stream.isAudioOnly());
             this.videoId = resolved.videoId();
             this.title = resolved.title();
@@ -124,6 +125,7 @@ public final class OfflineDownloader {
             this.index = 0;
             this.batch = null;
             this.subtitles = stream.isAudioOnly() ? OfflineCaptions.Selection.none() : resolved.captions().selection();
+            this.sponsor = sponsor;
         }
 
         /** A playlist entry. Stream urls expire, so the stream is chosen when the task starts. */
@@ -135,6 +137,7 @@ public final class OfflineDownloader {
             this.index = index;
             this.batch = batch;
             this.subtitles = OfflineCaptions.Selection.none();
+            this.sponsor = OfflineSponsorBlock.Selection.none();
         }
 
         State getState() {
@@ -242,7 +245,7 @@ public final class OfflineDownloader {
             }
         }
         Activity activity = Utils.getActivity();
-        if (activity == null || activity.isFinishing()) {
+        if (activity == null || activity.isFinishing() || activity.isDestroyed()) {
             Logger.printInfo(() -> "No activity to show the quality picker");
             return;
         }
@@ -264,7 +267,7 @@ public final class OfflineDownloader {
                 if (resolved == null) {
                     sheet.dismiss();
                     Utils.showToastLong(str("morphe_offline_no_formats"));
-                } else if (activity.isFinishing()) {
+                } else if (!sheet.isActive()) {
                     sheet.dismiss();
                 } else {
                     showFormats(sheet, resolved, savedKeys);
@@ -280,7 +283,7 @@ public final class OfflineDownloader {
             if (savedKeys.contains(OfflineVideo.keyOf(resolved.videoId(), stream.isAudioOnly()))) {
                 Utils.showToastShort(str("morphe_offline_already_downloaded"));
             } else {
-                enqueue(resolved, stream);
+                enqueue(resolved, stream, sheet.sponsorSelection());
             }
         }, () -> {
             sheet.dismiss();
@@ -361,8 +364,9 @@ public final class OfflineDownloader {
 
     // endregion
 
-    private static void enqueue(OfflineFormats.Resolved resolved, OfflineFormats.Stream stream) {
-        Task task = new Task(resolved, stream);
+    private static void enqueue(OfflineFormats.Resolved resolved, OfflineFormats.Stream stream,
+                                OfflineSponsorBlock.Selection sponsor) {
+        Task task = new Task(resolved, stream, sponsor);
         synchronized (tasks) {
             if (tasks.containsKey(task.key)) {
                 Utils.showToastShort(str("morphe_offline_already_downloading"));
@@ -526,6 +530,10 @@ public final class OfflineDownloader {
                     ? saveAudio(context, task, files[0])
                     : saveVideo(context, task, files[0], files[1]);
             OfflineCaptions.download(context, saved, task);
+            OfflineSponsorBlock.Result sponsorResult = task.sponsor.result();
+            if (task.sponsor.include() && sponsorResult != null) {
+                OfflineSponsorBlock.save(saved, task.sponsor, sponsorResult);
+            }
             OfflineIndex.put(saved);
             if (OfflineOptions.saveThumbnailWithDownloads()) saveThumbnailCopy(context, task);
 

@@ -160,6 +160,11 @@ Subtitles, if chosen, are saved to %3$s"</string>
     <string name="morphe_offline_batch_part_already_downloaded">%d already downloaded</string>
     <string name="morphe_offline_subtitles_include">Include subtitles</string>
     <string name="morphe_offline_subtitles_none">No subtitles to download</string>
+    <string name="morphe_offline_sponsorblock_include">Include SponsorBlock</string>
+    <string name="morphe_offline_sponsorblock_summary">Skip the chosen segments in the offline player, following your SponsorBlock category settings</string>
+    <string name="morphe_offline_sponsorblock_loading">Checking SponsorBlock segments…</string>
+    <string name="morphe_offline_sponsorblock_none">No SponsorBlock segments for this video</string>
+    <string name="morphe_offline_sponsorblock_error">SponsorBlock lookup failed</string>
     <string name="morphe_offline_subtitles_languages">Languages (%1$d/%2$d selected)</string>
     <string name="morphe_offline_subtitles_languages_title">Subtitle languages</string>
     <string name="morphe_offline_subtitles_translated">Auto-translated</string>

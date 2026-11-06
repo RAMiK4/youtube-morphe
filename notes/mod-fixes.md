@@ -1,8 +1,9 @@
 <!-- Fixes of the mod, listed in the release notes and the in-app changelog after the Morphe bug fixes of the same patches version. -->
 
-## 2.1.0-dev.11
+## 2.1.0
 
 * **Theme:** Menus use the dark color `#0F0F0F` of the Original variant
+* **Save to device:** Footer of the quality picker is cut off in landscape and with large font sizes
 
 ## 1.49.0-dev.10
 
