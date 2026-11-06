@@ -149,6 +149,11 @@ Seçilen altyazılar %3$s klasörüne kaydedilir"</string>
     <string name="morphe_offline_aspect_original">Orijinal boyut</string>
     <string name="morphe_offline_subtitles_include">Altyazıları ekle</string>
     <string name="morphe_offline_subtitles_none">İndirilecek altyazı yok</string>
+    <string name="morphe_offline_sponsorblock_include">SponsorBlock ekle</string>
+    <string name="morphe_offline_sponsorblock_summary">Seçilen bölümleri çevrimdışı oynatıcıda SponsorBlock kategori ayarlarınıza göre atla</string>
+    <string name="morphe_offline_sponsorblock_loading">SponsorBlock bölümleri kontrol ediliyor…</string>
+    <string name="morphe_offline_sponsorblock_none">Bu video için SponsorBlock bölümü yok</string>
+    <string name="morphe_offline_sponsorblock_error">SponsorBlock sorgusu başarısız oldu</string>
     <string name="morphe_offline_subtitles_languages">Diller (%1$d/%2$d seçili)</string>
     <string name="morphe_offline_subtitles_languages_title">Altyazı dilleri</string>
     <string name="morphe_offline_subtitles_translated">Otomatik çeviri</string>

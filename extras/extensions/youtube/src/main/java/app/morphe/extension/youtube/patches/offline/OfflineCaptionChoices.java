@@ -12,6 +12,7 @@ package app.morphe.extension.youtube.patches.offline;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import app.morphe.extension.youtube.innertube.SaveToDeviceResponse.DownloadCaptionText;
 import app.morphe.extension.youtube.innertube.SaveToDeviceResponse.DownloadCaptionTrack;
@@ -24,6 +25,26 @@ final class OfflineCaptionChoices {
     }
 
     private OfflineCaptionChoices() {
+    }
+
+    /** Exact track keys win; bare playlist language choices prefer uploaded native tracks over ASR. */
+    static void restoreRemembered(Set<String> selected, List<Track> tracks, String[] remembered) {
+        for (String key : remembered) {
+            Track match = null;
+            for (Track track : tracks) {
+                if (track.key().equals(key)) {
+                    match = track;
+                    break;
+                }
+            }
+            if (match == null) {
+                for (Track track : tracks) {
+                    if (!track.translation().isEmpty() || !track.language().equals(key)) continue;
+                    if (match == null || (match.kind().equals("asr") && !track.kind().equals("asr"))) match = track;
+                }
+            }
+            if (match != null) OfflineSubtitle.select(selected, match.key(), true);
+        }
     }
 
     static boolean needsMetadata(DownloadCaptionTrackList list) {

@@ -61,6 +61,8 @@ final class OfflineSubtitleOverlay {
             ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
     private final String previewText;
     private List<OfflineCaptions.Saved> tracks = List.of();
+    private List<OfflineSubtitle.Cue> selectedCues = List.of();
+    private OfflineCaptions.Saved loadedTrack;
     private String videoKey = "";
     private String rendered = "";
     private int selected;
@@ -130,9 +132,21 @@ final class OfflineSubtitleOverlay {
                 }
             }
             control.setVisibility(tracks.isEmpty() ? View.GONE : View.VISIBLE);
+            loadedTrack = null;
+            selectedCues = List.of();
         }
-        String next = style.enabled && !tracks.isEmpty()
-                ? OfflineSubtitle.textAt(tracks.get(selected).cues(), timeMs) : "";
+        OfflineCaptions.Saved track = tracks.isEmpty() ? null : tracks.get(selected);
+        if (track != loadedTrack) {
+            loadedTrack = track;
+            selectedCues = List.of();
+            if (track != null) Utils.runOnBackgroundThread(() -> {
+                List<OfflineSubtitle.Cue> cues = track.cues();
+                Utils.runOnMainThread(() -> {
+                    if (loadedTrack == track) selectedCues = cues;
+                });
+            });
+        }
+        String next = style.enabled ? OfflineSubtitle.textAt(selectedCues, timeMs) : "";
         if (!rendered.equals(next)) {
             rendered = next;
             render();

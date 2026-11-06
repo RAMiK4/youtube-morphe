@@ -75,8 +75,8 @@ private val saveToDeviceResourcePatch = resourcePatch {
             ResourceGroup(
                 "drawable",
                 *arrayOf(
-                    "aspect", "back", "check", "close", "next", "pause", "play",
-                    "previous", "rotate", "search", "sort", "speed",
+                    "aspect", "back", "check", "close", "closed_captions", "next", "pause", "play",
+                    "previous", "rotate", "search", "sort", "speed", "sponsorblock",
                 ).map { "morphe_offline_$it.xml" }.toTypedArray(),
             ),
         )

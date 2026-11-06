@@ -53,6 +53,10 @@ public final class OfflineVideo {
     public volatile long lastPositionMs;
     /** Public sidecars plus a private cue copy; public file moves do not break playback. */
     final List<OfflineCaptions.Saved> subtitles = new ArrayList<>();
+    boolean sponsorChecked;
+    long sponsorDurationMs;
+    List<String> sponsorCategories = List.of();
+    List<OfflineSponsorSegments.Segment> sponsorSegments = List.of();
 
     public OfflineVideo(@NonNull String videoId, @NonNull String title, @NonNull String author,
                         @NonNull String channelId, long lengthMs, @NonNull String contentUri,
@@ -107,6 +111,10 @@ public final class OfflineVideo {
         JSONArray tracks = new JSONArray();
         for (OfflineCaptions.Saved subtitle : subtitles) tracks.put(subtitle.toJson());
         json.put("subtitles", tracks);
+        json.put("sponsorChecked", sponsorChecked);
+        json.put("sponsorDurationMs", sponsorDurationMs);
+        json.put("sponsorCategories", String.join(",", sponsorCategories));
+        json.put("sponsorSegments", OfflineSponsorSegments.toJson(sponsorSegments));
         return json;
     }
 
@@ -140,6 +148,10 @@ public final class OfflineVideo {
                 if (track != null) video.subtitles.add(OfflineCaptions.Saved.fromJson(track));
             }
         }
+        video.sponsorChecked = json.optBoolean("sponsorChecked", false);
+        video.sponsorDurationMs = json.optLong("sponsorDurationMs", 0);
+        video.sponsorCategories = OfflineSponsorSegments.categories(json.optString("sponsorCategories", ""));
+        video.sponsorSegments = OfflineSponsorSegments.fromJson(json.optJSONArray("sponsorSegments"), false);
         return video;
     }
 }

@@ -15,7 +15,6 @@ import static app.morphe.extension.shared.StringRef.str;
 import android.content.Context;
 import android.net.Uri;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -53,17 +52,12 @@ final class OfflineCaptions {
         final Set<String> selected = new LinkedHashSet<>();
         boolean include;
         String format;
-
         Catalog(List<Track> tracks) {
             this.tracks = tracks;
             include = SaveToDeviceSettings.SUBTITLES_INCLUDE.get();
             format = "vtt".equals(SaveToDeviceSettings.SUBTITLES_FORMAT.get()) ? "vtt" : "srt";
             String[] remembered = SaveToDeviceSettings.SUBTITLES_LANGUAGES.get().split(",");
-            for (String key : remembered) {
-                for (Track track : tracks) {
-                    if (track.key().equals(key)) OfflineSubtitle.select(selected, key, true);
-                }
-            }
+            OfflineCaptionChoices.restoreRemembered(selected, tracks, remembered);
             if (selected.isEmpty() && !tracks.isEmpty()) {
                 Track preferred = tracks.get(0);
                 for (Track track : tracks) {
@@ -103,8 +97,11 @@ final class OfflineCaptions {
         }
     }
 
-    record Saved(String language, String kind, String format, String name, String uri,
-                 List<OfflineSubtitle.Cue> cues) {
+    record Saved(String language, String kind, String format, String name, String uri, OfflineCueFile data) {
+        Saved(String language, String kind, String format, String name, String uri, List<OfflineSubtitle.Cue> cues) {
+            this(language, kind, format, name, uri, new OfflineCueFile(cues));
+        }
+
         JSONObject toJson() throws JSONException {
             JSONObject json = new JSONObject();
             json.put("language", language);
@@ -112,34 +109,33 @@ final class OfflineCaptions {
             json.put("format", format);
             json.put("name", name);
             json.put("uri", uri);
-            JSONArray copy = new JSONArray();
-            for (OfflineSubtitle.Cue cue : cues) {
-                copy.put(new JSONArray().put(cue.startMs()).put(cue.endMs()).put(cue.text()));
+            try {
+                json.put("cueFile", data.store(cueDirectory(Utils.getContext())));
+            } catch (IOException ex) {
+                JSONException failure = new JSONException("Could not save subtitle cues");
+                failure.initCause(ex);
+                throw failure;
             }
-            json.put("cues", copy);
             return json;
         }
 
-        static Saved fromJson(JSONObject json) {
-            List<OfflineSubtitle.Cue> cues = new ArrayList<>();
-            JSONArray array = json.optJSONArray("cues");
-            long previousEnd = 0;
-            if (array != null) {
-                for (int index = 0; index < array.length(); index++) {
-                    JSONArray cue = array.optJSONArray(index);
-                    if (cue == null) continue;
-                    long start = cue.optLong(0, -1);
-                    long end = cue.optLong(1, -1);
-                    String text = cue.optString(2, "");
-                    if (start >= previousEnd && end > start && !text.isEmpty()) {
-                        cues.add(new OfflineSubtitle.Cue(start, end, text));
-                        previousEnd = end;
-                    }
-                }
+        List<OfflineSubtitle.Cue> cues() {
+            try {
+                return data.load(cueDirectory(Utils.getContext()));
+            } catch (Exception ex) {
+                Logger.printInfo(() -> "Could not read saved subtitle cues", ex);
+                return List.of();
             }
-            return new Saved(json.optString("language"), json.optString("kind"), json.optString("format"),
-                    json.optString("name"), json.optString("uri"), List.copyOf(cues));
         }
+
+        static Saved fromJson(JSONObject json) {
+            return new Saved(json.optString("language"), json.optString("kind"), json.optString("format"),
+                    json.optString("name"), json.optString("uri"), OfflineCueFile.fromJson(json));
+        }
+    }
+
+    private static File cueDirectory(Context context) {
+        return new File(OfflineIndex.getDirectory(context), "subs");
     }
 
     private OfflineCaptions() {
@@ -183,13 +179,18 @@ final class OfflineCaptions {
             }
             int status = connection.getResponseCode();
             Logger.printDebug(() -> "Offline caption player " + videoId + " HTTP " + status);
-            if (status != 200) throw new IOException("Caption player HTTP " + status);
+            checkPlayerStatus(status);
             try (InputStream input = connection.getInputStream()) {
                 return DownloadPlayerResponse.parseFrom(input);
             }
         } finally {
             connection.disconnect();
         }
+    }
+
+    static void checkPlayerStatus(int status) throws IOException {
+        if (OfflineSubtitle.isRateLimited(status, "")) throw new RateLimitException();
+        if (status != 200) throw new IOException("Caption player HTTP " + status);
     }
 
     static void download(Context context, OfflineVideo video, OfflineDownloader.Task task) {
@@ -299,6 +300,7 @@ final class OfflineCaptions {
 
     static void delete(Context context, OfflineVideo video) {
         for (Saved subtitle : video.subtitles) {
+            subtitle.data.delete(cueDirectory(context));
             try {
                 Uri uri = Uri.parse(subtitle.uri);
                 if ("file".equals(uri.getScheme())) {
@@ -314,6 +316,6 @@ final class OfflineCaptions {
         }
     }
 
-    private static final class RateLimitException extends IOException {
+    static final class RateLimitException extends IOException {
     }
 }
