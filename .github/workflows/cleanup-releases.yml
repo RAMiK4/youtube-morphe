@@ -1,0 +1,39 @@
+name: Remove old releases
+
+on:
+  workflow_dispatch:
+    inputs:
+      keep:
+        description: "Number of newest published releases to keep"
+        required: true
+        default: "2"
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      KEEP: ${{ inputs.keep }}
+    steps:
+      - name: Remove releases and their tags
+        run: |
+          set -euo pipefail
+          [[ "$KEEP" =~ ^[0-9]+$ ]] && [ "$KEEP" -ge 1 ] || { echo "::error::keep must be a number of at least 1"; exit 1; }
+          # Drafts (such as "source" with the original APK) are never touched
+          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate \
+            -q '.[] | select(.draft | not) | [.published_at, .tag_name] | @tsv' \
+            | sort -r | cut -f2 | tail -n +"$((KEEP + 1))" > old.txt
+          echo "Keeping: $(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" -q '[.[] | select(.draft | not)] | sort_by(.published_at) | reverse | .[0:'"$KEEP"'] | map(.tag_name) | join(", ")')"
+          while IFS= read -r tag; do
+            [ -n "$tag" ] || continue
+            gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
+            echo "Removed $tag"
+          done < old.txt
