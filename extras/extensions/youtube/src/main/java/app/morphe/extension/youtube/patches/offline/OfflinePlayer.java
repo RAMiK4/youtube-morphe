@@ -100,8 +100,8 @@ public final class OfflinePlayer {
             OfflineVideo video = current;
             if (video == null || video.sponsorSegments.isEmpty()) return;
             long position = getPosition();
-            boolean valid = OfflineSponsorBlock.enabled()
-                    && OfflineSponsorSegments.durationMatches(video.sponsorDurationMs, getDuration());
+            // Segments are only saved when the download asked for them.
+            boolean valid = OfflineSponsorSegments.durationMatches(video.sponsorDurationMs, getDuration());
             OfflineSponsorSegments.Segment automatic = valid ? OfflineSponsorSegments.at(video.sponsorSegments,
                     video.sponsorCategories, position, true, skippedOnce, sponsorBehavior) : null;
             if (automatic != null && OfflineSponsorSegments.skipTarget(automatic, position,

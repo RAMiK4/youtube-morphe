@@ -65,12 +65,6 @@ final class OfflineSponsorBlock {
         }
     }
 
-    /** SponsorBlock is turned on in the app settings. */
-    static boolean enabled() {
-        SponsorBlockApi.SettingsAdapter settings = settings();
-        return settings != null && settings.sbEnabled().get();
-    }
-
     static boolean toastOnSkip() {
         SponsorBlockApi.SettingsAdapter settings = settings();
         return settings != null && settings.toastOnSkip().get();
@@ -148,7 +142,6 @@ final class OfflineSponsorBlock {
         }
 
         void fetch(String videoId) {
-            if (!enabled()) return;
             Utils.runOnBackgroundThread(() -> {
                 Result fetched = OfflineSponsorBlock.fetch(videoId);
                 Utils.runOnMainThread(() -> {
@@ -160,8 +153,8 @@ final class OfflineSponsorBlock {
         }
 
         void add(Activity activity, LinearLayout parent, int foreground) {
-            // Only offered while SponsorBlock is turned on, so its category settings apply.
-            if (!enabled()) return;
+            // Offered even with SponsorBlock turned off for online videos: the download keeps
+            // its own choice, and the category behaviors of the SponsorBlock settings apply.
             this.activity = activity;
             this.foreground = foreground;
             container = new LinearLayout(activity);
