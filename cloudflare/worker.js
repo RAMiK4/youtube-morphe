@@ -1,7 +1,8 @@
 // Serves the APKs and the update information of YouTube Morphe from an R2 bucket.
-// Binding: the R2 bucket as BUCKET. Read-only: GET and HEAD under apk/ and updates/.
-//   /updates/<variant>.json  in-app update check (short cache, so a new build shows up quickly)
-//   /apk/<file>.apk          direct download (resumable)
+// Binding: the R2 bucket as BUCKET. Read-only: GET and HEAD under apk/ and updates/,
+// at the root (YouTube) or below an app folder such as music/ (YT Music).
+//   [<app>/]updates/<variant>.json  in-app update check (short cache, so a new build shows up quickly)
+//   [<app>/]apk/<file>.apk          direct download (resumable)
 
 export default {
   async fetch(request, env) {
@@ -9,7 +10,7 @@ export default {
       return new Response("Method not allowed", { status: 405, headers: { Allow: "GET, HEAD" } });
     }
     const key = decodeURIComponent(new URL(request.url).pathname.slice(1));
-    if (!/^(apk\/[\w.\-]+\.apk|updates\/[\w\-]+\.json)$/.test(key)) {
+    if (!/^([a-z]+\/)?(apk\/[\w.\-]+\.apk|updates\/[\w\-]+\.json)$/.test(key)) {
       return new Response("Not found", { status: 404 });
     }
 
@@ -22,7 +23,7 @@ export default {
     headers.set("Accept-Ranges", "bytes");
     if (key.endsWith(".apk")) {
       headers.set("Content-Type", "application/vnd.android.package-archive");
-      headers.set("Content-Disposition", `attachment; filename="${key.slice(4)}"`);
+      headers.set("Content-Disposition", `attachment; filename="${key.split("/").pop()}"`);
       headers.set("Cache-Control", "public, max-age=86400");
     } else {
       headers.set("Content-Type", "application/json; charset=utf-8");

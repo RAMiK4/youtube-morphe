@@ -508,7 +508,7 @@ jobs:
               | jq -r '[.Contents // [] | .[] | select(.Key | startswith("apk/test_") | not)]
                        | sort_by(.LastModified) | reverse | .[6:][] | .Key' > "$RUNNER_TEMP/old.txt"
             api list-objects-v2 --bucket "$R2_BUCKET" --output json \
-              | jq -r '.Contents // [] | .[] | .Key | select(startswith("apk/test_") or endswith("-test.json"))' >> "$RUNNER_TEMP/old.txt"
+              | jq -r '.Contents // [] | .[] | .Key | select(startswith("apk/test_") or (startswith("updates/") and endswith("-test.json")))' >> "$RUNNER_TEMP/old.txt"
             while IFS= read -r key; do
               [ -n "$key" ] || continue
               s3 rm "s3://$R2_BUCKET/$key" --only-show-errors
