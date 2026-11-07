@@ -38,6 +38,8 @@ Variant options (package, theme defaults) are set in `build_variant` calls of `.
 
 When the variable `DL_BASE_URL` is set, published builds are also uploaded to the R2 bucket `R2_BUCKET`: the APKs to `apk/`, the update info to `updates/<variant>.json`. The apps check `DL_BASE_URL/updates/<variant>.json` and download the APK from `DL_BASE_URL/apk/`, so they no longer depend on GitHub. The APKs of the last 3 builds are kept. `cloudflare/worker.js` is the Worker (`cdn`) that serves the bucket (binding `BUCKET`, read only). `updates/*.json` in this repository stays up to date for builds that still check GitHub.
 
+With the optional D1 binding `STATS` (database `stats`), the Worker counts per day the APK downloads per file and the update checks per variant, which is about the number of installs in use; only the path, the day and a count are stored. Ready-made queries for the D1 console: `cloudflare/stats.sql`.
+
 The update address is built into each APK: `DL_BASE_URL` must not change, or the builds that use it stop getting updates.
 
 ## Secrets (Settings → Secrets and variables → Actions)
