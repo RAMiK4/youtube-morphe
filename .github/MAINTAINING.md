@@ -3,7 +3,7 @@
 ## Release
 
 1. **Source APK** — the original YouTube APK (arm64, full APK) is attached to the draft release `source`. Replace it when a new YouTube version is supported. Do not delete or publish this draft.
-2. **Actions → Release YouTube Morphe → Run workflow**
+2. **Actions → Release YT Morphe → Run workflow**
    - `patches`: `stable` (latest stable Morphe release) or `dev` (latest dev release)
    - `publish`: unchecked builds a test APK into the run's *Artifacts* only
    - `update_preview` (test builds): the APK offers the latest release, to see the update dialog
@@ -11,7 +11,7 @@
 
 Old releases are removed with **Actions → Remove old releases** (`keep`: the newest published releases to keep; drafts such as `source` are never removed).
 
-Every published build becomes the latest release. The workflow builds the official Morphe patches with the additions in `extras/`, applies them together with the latest YaVoT release (built from source with the fixes in `addons/yavot/`), verifies package name and signature, publishes the release (the two APKs, then `YT_Morphe_PRO_Settings_v<patches version>.txt` with the settings of `settings/defaults.json`) and updates `updates/*.json` for the in-app update check.
+Every published build becomes the latest release. The workflow builds the official Morphe patches with the additions in `extras/`, applies them together with the latest YaVoT release (built from source with the fixes in `addons/yavot/`), verifies package name and signature, uploads the two APKs to R2, publishes the release (`YT_Morphe_PRO_Settings_v<patches version>.txt` with the settings of `settings/defaults.json`, and links to the APKs on R2) and updates `updates/*.json` for the in-app update check.
 
 The changelog is generated from the Morphe changelog (YouTube only), newest first: a stable version lists its own section; a dev version lists the new features of itself and the previous dev version, and the bug fixes of itself only. Fixes of the mod are added under `## <patches version>` in `notes/mod-fixes.md` and listed after the Morphe fixes of that version. Only when a release skips versions (such as the first dev build after a stable one), important features of the skipped versions can be added under `## <patches version>` in `notes/extra-features.md`; they are listed after the Morphe new features of that version. The release notes and the in-app dialog show the same order, New Features, Mod Features (`notes/mod-features.md`), Bug Fixes, then the files (release notes only). Release notes use `##` headings (GitHub draws a thin rule under them), the in-app dialog shows each title bold with a thin rule under it. Optional translations for the in-app dialog: `changelog/<language>.md` whose first line is `<!-- <patches version> -->`.
 
@@ -23,7 +23,7 @@ The changelog is generated from the Morphe changelog (YouTube only), newest firs
 - No "test version" note next to dev patches versions, users could misread it
 - What's new is a plain list, without a line for the YouTube and patches versions (such as "YouTube 21.44.528, Morphe Patches 2.1.0 (стабильная версия)"). A stable version lists its full changelog, the best YouTube features first; a dev version lists the new features of the last 2 dev versions
 - Link titles in `[color="#808080"]`, followed by the file size
-- Below the `YouTube Morphe PRO Settings` title, a 🔗 link to `YT_Morphe_PRO_Settings_v<patches version>.txt` of the release (`releases/download/<tag>/...`) with its size
+- Below the `YT Morphe PRO Settings` title, a 🔗 link to `YT_Morphe_PRO_Settings_v<patches version>.txt` of the release (`releases/download/<tag>/...`) with its size
 
 ## Configuration
 
@@ -38,7 +38,7 @@ Variant options (package, theme defaults) are set in `build_variant` calls of `.
 
 ## Downloads (Cloudflare R2)
 
-When the variable `DL_BASE_URL` is set, published builds are also uploaded to the R2 bucket `R2_BUCKET`: the APKs to `apk/`, the update info to `updates/<variant>.json`. The apps check `DL_BASE_URL/updates/<variant>.json` and download the APK from `DL_BASE_URL/apk/`, so they no longer depend on GitHub. The APKs of the last 3 builds are kept. `cloudflare/worker.js` is the Worker (`cdn`) that serves the bucket (binding `BUCKET`, read only). `updates/*.json` in this repository stays up to date for builds that still check GitHub.
+Published builds are uploaded to the R2 bucket `R2_BUCKET` (the variable `DL_BASE_URL` is required to publish; the APKs are not attached to the GitHub release): the APKs to `apk/`, the update info to `updates/<variant>.json`. The apps check `DL_BASE_URL/updates/<variant>.json` and download the APK from `DL_BASE_URL/apk/`, so they no longer depend on GitHub. The APKs of the last 3 builds are kept. `cloudflare/worker.js` is the Worker (`cdn`) that serves the bucket (binding `BUCKET`, read only). `updates/*.json` in this repository stays up to date for builds that still check GitHub.
 
 With the optional D1 binding `STATS` (database `stats`), the Worker counts per day the APK downloads per file and the update checks per variant, which is about the number of installs in use; only the path, the day and a count are stored. The page `DL_BASE_URL/stats?key=<STATS_KEY>` shows the counts, once the secret `STATS_KEY` is set on the Worker (Settings → Variables and Secrets); without it the page does not exist. Ready-made queries for the D1 console: `cloudflare/stats.sql`.
 

@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="branding/mipmap-xxxhdpi/morphe_adaptive.png" width="112" alt="YouTube Morphe icon">
+<img src="branding/mipmap-xxxhdpi/morphe_adaptive.png" width="112" alt="YT Morphe icon">
 
-# YouTube Morphe
+# YT Morphe
 
 YouTube with all [Morphe](https://github.com/MorpheApp/morphe-patches) patches, voice-over translation, a built-in video and audio downloader and ready-made settings.
 
