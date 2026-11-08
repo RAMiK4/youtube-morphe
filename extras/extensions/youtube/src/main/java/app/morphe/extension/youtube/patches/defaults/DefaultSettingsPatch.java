@@ -42,6 +42,7 @@ public final class DefaultSettingsPatch {
     private static final String[] SETTINGS_CLASSES = {
             "app.morphe.extension.shared.settings.BaseSettings",
             "app.morphe.extension.shared.settings.SharedYouTubeSettings",
+            "app.morphe.extension.shared.settings.SharedSettings",
             "app.morphe.extension.youtube.settings.Settings",
             "app.morphe.extension.youtube.settings.YandexVotSettings",
             "app.morphe.extension.youtube.patches.offline.SaveToDeviceSettings",
