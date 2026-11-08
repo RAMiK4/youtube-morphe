@@ -507,10 +507,10 @@ jobs:
             echo
             echo "## 📦 Files"
             echo
-            echo "| File | Package |"
+            echo "| File | Theme |"
             echo "|---|---|"
-            echo "| $(apk_link "$MORPHE") | \`app.morphe.android.youtube\` |"
-            echo "| $(apk_link "$HIBY") | \`com.hiby.music\` |"
+            echo "| $(apk_link "$MORPHE") | Pure black (/white) by default |"
+            echo "| $(apk_link "$HIBY") | Modern dark (/soft light) by default |"
             echo "| \`$SETTINGS\` | Recommended settings |"
           } > "$RUNNER_TEMP/notes.md"
           gh release create "$TAG" "$RUNNER_TEMP/$SETTINGS#$SETTINGS" \
