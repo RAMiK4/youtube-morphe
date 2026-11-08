@@ -6,7 +6,7 @@
 
 YouTube with all [Morphe](https://github.com/MorpheApp/morphe-patches) patches, voice-over translation, a built-in video and audio downloader and ready-made settings.
 
-[![Latest release](https://img.shields.io/github/v/release/RAMiK4/youtube-morphe?label=Download&sort=date&style=for-the-badge)](https://github.com/RAMiK4/youtube-morphe/releases/latest)
+[![Latest release](https://img.shields.io/github/v/release/RAMiK4/yt-morphe?label=Download&sort=date&style=for-the-badge)](https://github.com/RAMiK4/yt-morphe/releases/latest)
 
 </div>
 
@@ -21,20 +21,20 @@ YouTube with all [Morphe](https://github.com/MorpheApp/morphe-patches) patches, 
 | 🏝️ **Extra clone variant** | Dynamic Island on supported devices |
 | 🔔 **In-app update check** | New builds are shown in the app: *Morphe settings → Updates* |
 
-The changes of each version are listed in the [releases](https://github.com/RAMiK4/youtube-morphe/releases).
+The changes of each version are listed in the [releases](https://github.com/RAMiK4/yt-morphe/releases).
 
 ## 📱 Variants
 
-| Variant | Package | |
-|---|---|---|
-| **Amoled** | `app.morphe.android.youtube` | Material You and themes, pure black / white by default |
-| **Original** (BBK Clone) | `com.hiby.music` | Material You and themes, YouTube modern dark / soft light by default, plus BBK Dynamic Island for BBK cn devices |
+| Variant | |
+|---|---|
+| **Amoled** | Material You and themes, pure black / white by default |
+| **Original** (BBK Clone) | Material You and themes, modern dark / soft light by default, plus BBK Dynamic Island for BBK cn devices |
 
 Both variants can be installed side by side. Theme colors can be changed at any time: *Morphe settings → General*.
 
 ## 📥 Install
 
-1. Download the APK of your variant from the [latest release](https://github.com/RAMiK4/youtube-morphe/releases/latest).
+1. Download the APK of your variant from the [latest release](https://github.com/RAMiK4/yt-morphe/releases/latest).
 2. Install it. To sign in with a Google account, [MicroG-RE](https://morphe.software/microg) is required.
 
 Updates install over the previous version without losing data.

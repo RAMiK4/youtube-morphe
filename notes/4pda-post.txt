@@ -9,7 +9,7 @@
 [b]• Android:[/b] 10+ (10–17)
 [b]• Архитектура:[/b] arm64-v8a
 [b]• Языки:[/b] Все / Full Languages
-[b]• Название:[/b] YouTube [size=1](по умолчанию)[/size], YouTube Morphe, YT Morphe, YT
+[b]• Название:[/b] YouTube Morphe [size=1](по умолчанию)[/size], YouTube, YT Morphe, YT
 [b]• Иконка:[/b] mpYT [size=1](по умолчанию)[/size], Original, Morphe (black, dark, light), Morphe Play (black, light)
 [b]• Логотип заготовка:[/b] Original [size=1](по умолчанию)[/size], YouTube, Premium, Morphe, mpYT YouTube [size=1](пользовательский)[/size]
 [b]• Тема (версии):[/b] Original Black + Soft Light, Amoled Black + Material You + Разные

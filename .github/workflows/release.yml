@@ -44,7 +44,7 @@ env:
   PATCHES_REPO: MorpheApp/morphe-patches
   YAVOT_REPO: sashade8-ship-it/morphe-patches-yavot
   APP_TITLE: YT Morphe
-  APP_NAME: YouTube
+  APP_NAME: YouTube Morphe
   STRIPLIBS: arm64-v8a
   FORUM_URL: ""   # 4PDA topic URL
   # APKs and update info on Cloudflare R2, served by cloudflare/worker.js (required to publish)
@@ -507,10 +507,10 @@ jobs:
             echo
             echo "## 📦 Files"
             echo
-            echo "| File | Package |"
+            echo "| File | Theme |"
             echo "|---|---|"
-            echo "| $(apk_link "$MORPHE") | \`app.morphe.android.youtube\` |"
-            echo "| $(apk_link "$HIBY") | \`com.hiby.music\` |"
+            echo "| $(apk_link "$MORPHE") | Pure black (/white) by default |"
+            echo "| $(apk_link "$HIBY") | Modern dark (/soft light) by default |"
             echo "| \`$SETTINGS\` | Recommended settings |"
           } > "$RUNNER_TEMP/notes.md"
           gh release create "$TAG" "$RUNNER_TEMP/$SETTINGS#$SETTINGS" \
