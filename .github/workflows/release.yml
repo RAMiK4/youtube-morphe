@@ -44,7 +44,7 @@ env:
   PATCHES_REPO: MorpheApp/morphe-patches
   YAVOT_REPO: sashade8-ship-it/morphe-patches-yavot
   APP_TITLE: YT Morphe
-  APP_NAME: YouTube
+  APP_NAME: YouTube Morphe
   STRIPLIBS: arm64-v8a
   FORUM_URL: ""   # 4PDA topic URL
   # APKs and update info on Cloudflare R2, served by cloudflare/worker.js (required to publish)
