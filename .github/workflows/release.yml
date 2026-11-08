@@ -1,4 +1,4 @@
-name: Release YouTube Morphe
+name: Release YT Morphe
 
 on:
   workflow_dispatch:
@@ -43,11 +43,11 @@ concurrency:
 env:
   PATCHES_REPO: MorpheApp/morphe-patches
   YAVOT_REPO: sashade8-ship-it/morphe-patches-yavot
-  APP_TITLE: YouTube Morphe
+  APP_TITLE: YT Morphe
   APP_NAME: YouTube
   STRIPLIBS: arm64-v8a
   FORUM_URL: ""   # 4PDA topic URL
-  # APKs and update info on Cloudflare R2, served by cloudflare/worker.js (empty: GitHub releases)
+  # APKs and update info on Cloudflare R2, served by cloudflare/worker.js (required to publish)
   DL_BASE_URL: ${{ vars.DL_BASE_URL }}
   R2_BUCKET: ${{ vars.R2_BUCKET }}
 
@@ -298,6 +298,10 @@ jobs:
           fi
           echo "UPD_SUFFIX=$UPD_SUFFIX" >> "$GITHUB_ENV"
           echo "APK_PREFIX=$APK_PREFIX" >> "$GITHUB_ENV"
+          # Published APKs are on R2 only, the release links to them
+          if [ "${{ inputs.publish }}" = "true" ] && [ -z "$DL_BASE_URL" ]; then
+            echo "::error::Publishing needs the DL_BASE_URL variable: the APKs are only on R2"; exit 1
+          fi
           if [ "${{ inputs.update_preview }}" = "true" ]; then
             [ "${{ inputs.publish }}" != "true" ] || { echo "::error::Update preview is for test builds only. Uncheck 'Publish the release'."; exit 1; }
             CHECK_BUILD=1
@@ -321,7 +325,7 @@ jobs:
           build_variant() {
             local id=$1 label=$2 safe=$3 pkg=$4 clone=$5 theme=$6
             local opts="$RUNNER_TEMP/options-$id.json"
-            local base="YouTube_Morphe-v${YT_VERSION}-p${PATCHES_VER}"
+            local base="YT_Morphe-v${YT_VERSION}-p${PATCHES_VER}"
             # The asset label is the file name, so the release page shows the name of the downloaded file
             local out="$RUNNER_TEMP/out/${base}_${safe}.apk"
             echo "${base}_${label}.apk" > "$out.label"
@@ -446,34 +450,6 @@ jobs:
           path: ${{ runner.temp }}/out/*.apk
           retention-days: 3
 
-      - name: Publish release
-        if: ${{ inputs.publish }}
-        run: |
-          HIBY=$(cat "$RUNNER_TEMP"/out/*BBK_Clone.apk.label)
-          MORPHE=$(cat "$RUNNER_TEMP"/out/*Amoled_Mod.apk.label)
-          # Recommended settings (settings/defaults.json), imported in Morphe settings → Other → Backup settings
-          SETTINGS="YT_Morphe_PRO_Settings_v${PATCHES_VER}.txt"
-          jq . settings/defaults.json > "$RUNNER_TEMP/$SETTINGS"
-          {
-            cat "$RUNNER_TEMP/changes.md"
-            echo
-            echo "## 📦 Files"
-            echo
-            echo "| File | Package |"
-            echo "|---|---|"
-            echo "| \`$MORPHE\` | \`app.morphe.android.youtube\` |"
-            echo "| \`$HIBY\` | \`com.hiby.music\` |"
-            echo "| \`$SETTINGS\` | Recommended settings |"
-          } > "$RUNNER_TEMP/notes.md"
-          FILES=()
-          for f in "$RUNNER_TEMP"/out/*.apk; do FILES+=("$f#$(cat "$f.label")"); done
-          gh release create "$TAG" "${FILES[@]}" \
-            --title "$APP_TITLE v$YT_VERSION p$PATCHES_VER (Mod)" \
-            --notes-file "$RUNNER_TEMP/notes.md" \
-            --latest
-          # Third file, uploaded after the APKs: the recommended settings for import
-          gh release upload "$TAG" "$RUNNER_TEMP/$SETTINGS#$SETTINGS"
-
       - name: Upload to R2
         if: ${{ (inputs.publish || inputs.r2_test) && vars.DL_BASE_URL != '' }}
         env:
@@ -515,6 +491,32 @@ jobs:
               echo "Removed $key"
             done < "$RUNNER_TEMP/old.txt"
           fi
+
+      - name: Publish release
+        if: ${{ inputs.publish }}
+        run: |
+          HIBY=$(basename "$RUNNER_TEMP"/out/*BBK_Clone.apk)
+          MORPHE=$(basename "$RUNNER_TEMP"/out/*Amoled_Mod.apk)
+          # Recommended settings (settings/defaults.json), imported in Morphe settings → Other → Backup settings
+          SETTINGS="YT_Morphe_PRO_Settings_v${PATCHES_VER}.txt"
+          jq . settings/defaults.json > "$RUNNER_TEMP/$SETTINGS"
+          # The APKs are on R2 only (uploaded in the step before), the release links to them
+          apk_link() { echo "[\`$1\`]($DL_BASE_URL/apk/$1)"; }
+          {
+            cat "$RUNNER_TEMP/changes.md"
+            echo
+            echo "## 📦 Files"
+            echo
+            echo "| File | Package |"
+            echo "|---|---|"
+            echo "| $(apk_link "$MORPHE") | \`app.morphe.android.youtube\` |"
+            echo "| $(apk_link "$HIBY") | \`com.hiby.music\` |"
+            echo "| \`$SETTINGS\` | Recommended settings |"
+          } > "$RUNNER_TEMP/notes.md"
+          gh release create "$TAG" "$RUNNER_TEMP/$SETTINGS#$SETTINGS" \
+            --title "$APP_TITLE v$YT_VERSION p$PATCHES_VER (Mod)" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            --latest
 
       - name: Publish update info
         if: ${{ inputs.publish }}

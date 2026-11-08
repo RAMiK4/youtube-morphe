@@ -80,6 +80,7 @@
   "hide_video_labels": false,
   "hide_you_may_like_section": false,
   "hide_youtube_premium_promotions": false,
+  "morphe_patches_update_notice": "OFF",
   "native_snackbar": true,
   "navigation_bar_glass": true,
   "navigation_bar_glass_opacity": 20,

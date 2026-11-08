@@ -1,4 +1,4 @@
-// Serves the APKs and the update information of YouTube Morphe from an R2 bucket.
+// Serves the APKs and the update information of YT Morphe from an R2 bucket.
 // Binding: the R2 bucket as BUCKET. Read-only: GET and HEAD under apk/ and updates/,
 // at the root (YouTube) or below an app folder such as music/ (YT Music).
 //   [<app>/]updates/<variant>.json  in-app update check (short cache, so a new build shows up quickly)
@@ -55,11 +55,11 @@ function table(title, columns, rows) {
 
 /** Shorter names: "YT Music · Original_Mod_BBK_Clone" instead of the full path. */
 function label(path) {
-  const app = path.startsWith("music/") ? "YT Music" : "YouTube";
+  const app = path.startsWith("music/") ? "YT Music" : "YT";
   const file = path.split("/").pop();
   const variants = { "hiby.json": "Original", "apple.json": "Original", "morphe.json": "Amoled" };
   if (file.endsWith(".json")) return `${app} · ${variants[file] ?? file}`;
-  return `${app} · ${file.replace(/^(YouTube|YT_Music)_Morphe-/, "").replace(/\.apk$/, "")}`;
+  return `${app} · ${file.replace(/^(YouTube|YT|YT_Music)_Morphe-/, "").replace(/\.apk$/, "")}`;
 }
 
 async function statsPage(env) {
