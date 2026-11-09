@@ -128,6 +128,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Changes of the mod to official Morphe files (addons/morphe/*.patch, such as features
+          # sent to Morphe that are not merged yet), skipped once Morphe includes them
+          for f in "$GITHUB_WORKSPACE"/addons/morphe/*.patch; do
+            [ -f "$f" ] || continue
+            if git apply --check "$f" 2>/dev/null; then
+              git apply "$f"
+              echo "Applied: $(basename "$f")"
+            elif git apply --check -R "$f" 2>/dev/null; then
+              echo "::notice::$(basename "$f") is already in Morphe $PATCHES_TAG, skipped"
+            else
+              echo "::error::$(basename "$f") no longer applies to Morphe $PATCHES_TAG"
+              exit 1
+            fi
+          done
           # Additional patches and code from extras/ are added to the official ones.
           # Extras only add files: the official Morphe files are never replaced.
           clash=0
@@ -150,10 +164,20 @@ jobs:
             dst="patches/src/main/resources/addresources/$loc/youtube/$(basename "$src")"
             [ -f "$dst" ] || { echo "::error::Strings file $dst not found"; exit 1; }
             python3 - "$src" "$dst" <<'PY'
-          import sys
+          import re, sys
           src, dst = sys.argv[1], sys.argv[2]
           extra = open(src, encoding="utf-8").read()
           text = open(dst, encoding="utf-8").read()
+          # Strings that Morphe already has (a translation that reached Crowdin) are left out
+          names = set(re.findall(r'<(?:string|string-array|plurals) name="([^"]+)"', text))
+          kept = []
+          for line in extra.splitlines(keepends=True):
+              m = re.search(r'<(?:string|string-array|plurals) name="([^"]+)"', line)
+              if m and m.group(1) in names and line.rstrip().endswith("</string>"):
+                  print(f"Skipped, already in Morphe: {m.group(1)}")
+                  continue
+              kept.append(line)
+          extra = "".join(kept)
           i = text.rindex("</resources>")
           open(dst, "w", encoding="utf-8").write(text[:i] + extra + text[i:])
           PY

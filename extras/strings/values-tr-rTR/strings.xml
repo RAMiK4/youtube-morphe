@@ -197,3 +197,11 @@ Seçilen altyazılar %3$s klasörüne kaydedilir"</string>
     <string name="morphe_offline_subtitles_font_monospace">Eş aralıklı</string>
     <string name="morphe_offline_subtitles_font_casual">Casual</string>
     <string name="morphe_offline_subtitles_font_cursive">El yazısı</string>
+    <!-- Quick download menu (addons/morphe/quick-download-quality-menu.patch) -->
+    <string name="morphe_external_downloader_quick_best_quality">En iyi kalite</string>
+    <string name="morphe_external_downloader_quick_better_quality">Daha iyi kalite</string>
+    <string name="morphe_external_downloader_quick_recommended">Önerilen</string>
+    <string name="morphe_external_downloader_quick_smaller_file">Daha küçük dosya</string>
+    <string name="morphe_external_downloader_quick_source_audio">Kaynak ses</string>
+    <string name="morphe_external_downloader_quick_thumbnail">Küçük resim</string>
+    <string name="morphe_external_downloader_quick_thumbnail_summary">Orijinal boyut</string>
