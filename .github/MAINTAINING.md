@@ -23,13 +23,13 @@ The changelog is generated from the Morphe changelog (YouTube only), newest firs
 - No "test version" note next to dev patches versions, users could misread it
 - What's new is a plain list, without a line for the YouTube and patches versions (such as "YouTube 21.44.528, Morphe Patches 2.1.0 (стабильная версия)"). A stable version lists its full changelog, the best YouTube features first; a dev version lists the new features of the last 2 dev versions
 - Link titles in `[color="#808080"]`, followed by the file size
-- Below the `YT Morphe PRO Settings` title, a 🔗 link to `YT_Morphe_PRO_Settings_v<patches version>.txt` of the release (`releases/download/<tag>/...`) with its size
+- Section order: header, What's new, Features, Download (Amoled, then Original), Mod info, Help (MicroG RE, playback fixes)
 
 ## Configuration
 
 | File | Purpose |
 |---|---|
-| `settings/defaults.json` | Recommended settings (Morphe settings export). Each setting is applied once: on first install, or on the update that adds it. |
+| `settings/defaults.json` | Recommended settings (Morphe settings export). Each setting is applied once: on first install, or on the update that adds it. Importing settings (also a preset file) keeps the channel whitelists of ads, playback speed and SponsorBlock. |
 | `branding/` | App icon (`mipmap-*`), header logo and notification icon (`drawable-*`) |
 | `extras/` | Additional patches: theme defaults, default settings, update check, restart on update, experimental notice, Save to device. Strings and arrays of `extras/strings/<locale>/` are appended to the YouTube ones |
 | `addons/morphe/` | Changes of the mod to official Morphe files (`git apply` patches, such as features sent to Morphe that are not merged yet; skipped once Morphe includes them, the build fails if one no longer applies). Their new strings in other languages go to `extras/strings/`; strings that Morphe already has are left out |
