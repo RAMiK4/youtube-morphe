@@ -1,4 +1,4 @@
-[img]https://4pda.to/static/c/img/att-3529/35292760.png[/img]  [size=2][b][color="#ff0044"]YouTube Morphe[/color][/b][/size] v21.45.82 Mod ✓
+[img]https://4pda.to/static/c/img/att-3529/35292760.png[/img]  [size=2][b][color="#ff0040"]YouTube Morphe[/color][/b][/size] v21.45.82 Mod ✓
 
 [b]Тип:[/b] Модификация
 [b]Версия:[/b] 21.45.82
@@ -40,9 +40,10 @@
 [i]» extra features & patched by[/i] [b]Ramik ☆[/b][/size][/right]
 [/spoiler]
 [center][b]Скачать ↆ Download[/b][/center]
-▷ Amoled [b][color="#ff0044"]YouTube Morphe v21.45.82[/color][/b] p2.2.0+VoT Mod ✓
 
-▷ Original [b][color="#ff0044"]YouTube Morphe v21.45.82[/color][/b] p2.2.0+VoT Mod (Clone) ✓
+▷ Amoled [b][color="#ff0040"]YouTube Morphe v21.45.82[/color][/b] p2.2.0+VoT Mod ✓
+
+▷ Original [b][color="#ff0040"]YouTube Morphe v21.45.82[/color][/b] p2.2.0+VoT Mod (Clone) ✓
 
 [spoiler=☑ Информация о моде »]
 
@@ -62,7 +63,7 @@
 [spoiler=⊕ Помощь »]
 
 [b]⊕ Для работы модов требуется MicroG:[/b]
-[b]✔ [color="#ff0044"]MicroG RE[/color][/b] [size=1](by WSTxda)[/size]
+[b]✔ [color="#ff0040"]MicroG RE[/color][/b] [size=1](by WSTxda)[/size]
 🔗 [url="https://github.com/MorpheApp/MicroG-RE/releases/download/7.3.0/microg-7.3.0-noicon-arm64-v8a.apk"][color="#808080"]MicroG_RE-7.3.0.apk[/color][/url] (43,5 МБ)
 [size=1][i](если эта версия MicroG уже установлена, скачивать её заново не нужно)[/i][/size]
 
