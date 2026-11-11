@@ -4,7 +4,7 @@
 
 ## 2.2.0
 
-* **Downloads:** Quick download menu with qualities and file sizes (YTindir): tap a quality to choose it, then Download, or open the downloader with All formats
+* **Downloads:** Quick download menu with qualities and file sizes (YTindir): tap a quality to choose it, then Download, or open the download window of the downloader with All options
 
 ## 2.2.0-dev.2
 

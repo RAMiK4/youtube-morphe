@@ -347,7 +347,7 @@ index 0000000..0efc4e8
 +}
 diff --git a/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/downloads/QuickDownloadMenu.java b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/downloads/QuickDownloadMenu.java
 new file mode 100644
-index 0000000..96b880d
+index 0000000..81f4f11
 --- /dev/null
 +++ b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/downloads/QuickDownloadMenu.java
 @@ -0,0 +1,657 @@
@@ -414,7 +414,7 @@ index 0000000..96b880d
 + * Frame rates, codecs and file sizes are filled in once the video's streams are read.
 + * <p>
 + * A tap on a quality or an audio format marks it, and Download downloads the marked one.
-+ * All formats opens the downloader with all its options. The thumbnail is downloaded right away.
++ * All options opens the download window of the downloader with all its options. The thumbnail is downloaded right away.
 + */
 +public final class QuickDownloadMenu {
 +
@@ -425,7 +425,7 @@ index 0000000..96b880d
 +        /**
 +         * @param quickDownloadType "video", "audio" or "thumbnail" to queue the download in the background,
 +         *                          null to open the downloader with all its options
-+         *                          ({@code FORMAT_LIST} "all" in the extras: on its full format list).
++         *                          ({@code FORMAT_LIST} "none" in the extras: without the quick list of YTindir).
 +         * @param quickExtras       Extras that replace the default quality of a quick download,
 +         *                          see {@link ExternalDownloaderPreference#launchExternalDownloader(String, Context, String, String, Bundle)}.
 +         */
@@ -448,7 +448,7 @@ index 0000000..96b880d
 +    private static final int FAINT_BACKGROUND_ALPHA = 0x1F;
 +    /** Alpha of the background of the marked row. */
 +    private static final int MARKED_BACKGROUND_ALPHA = 0x14;
-+    /** Alpha of the outline of the All formats button. */
++    /** Alpha of the outline of the All options button. */
 +    private static final int OUTLINE_ALPHA = 0x66;
 +    private static final int RIPPLE_ALPHA = 0x33;
 +
@@ -605,9 +605,9 @@ index 0000000..96b880d
 +                backgroundColor != null ? backgroundColor : ThemeUtils.getDialogBackgroundColor(),
 +                () -> {
 +                    dialog.dismiss();
-+                    // YTindir opens its full format list instead of its own quick list.
++                    // YTindir opens its download window itself instead of its own quick list.
 +                    Bundle extras = new Bundle();
-+                    extras.putString("FORMAT_LIST", "all");
++                    extras.putString("FORMAT_LIST", "none");
 +                    launcher.launch(null, extras);
 +                },
 +                () -> {
@@ -898,20 +898,20 @@ index 0000000..96b880d
 +    }
 +
 +    /**
-+     * All formats, which opens the downloader with all its options, and Download, which downloads the marked choice.
++     * All options, which opens the downloader with all its options, and Download, which downloads the marked choice.
 +     */
-+    private View createButtons(int backgroundColor, Runnable onAllFormats, Runnable onDownload) {
++    private View createButtons(int backgroundColor, Runnable onAllOptions, Runnable onDownload) {
 +        LinearLayout buttons = new LinearLayout(context);
 +        buttons.setOrientation(LinearLayout.HORIZONTAL);
 +        buttons.setPadding(Dim.dp16, Dim.dp8, Dim.dp16, Dim.dp8);
 +
 +        GradientDrawable outline = rounded(Dim.dp24, 0);
 +        outline.setStroke(Math.max(1, Dim.dp1), withAlpha(foregroundColor, OUTLINE_ALPHA));
-+        View allFormats = createButton(str("morphe_external_downloader_quick_all_formats"), ICON_LIST,
-+                foregroundColor, outline, onAllFormats);
-+        LinearLayout.LayoutParams allFormatsParams = new LinearLayout.LayoutParams(0, Dim.dp48, 1);
-+        allFormatsParams.setMarginEnd(Dim.dp8);
-+        buttons.addView(allFormats, allFormatsParams);
++        View allOptions = createButton(str("morphe_external_downloader_quick_options"), ICON_LIST,
++                foregroundColor, outline, onAllOptions);
++        LinearLayout.LayoutParams allOptionsParams = new LinearLayout.LayoutParams(0, Dim.dp48, 1);
++        allOptionsParams.setMarginEnd(Dim.dp8);
++        buttons.addView(allOptions, allOptionsParams);
 +
 +        // The colors of the menu, swapped.
 +        View download = createButton(str("morphe_external_downloader_quick_download"), ICON_DOWNLOAD,
@@ -1206,7 +1206,7 @@ index 2b1bf88..714e6e1 100644
              )
          )
 diff --git a/patches/src/main/resources/addresources/values/music/strings.xml b/patches/src/main/resources/addresources/values/music/strings.xml
-index f21126b..4d07d93 100644
+index f21126b..59bdd1e 100644
 --- a/patches/src/main/resources/addresources/values/music/strings.xml
 +++ b/patches/src/main/resources/addresources/values/music/strings.xml
 @@ -141,6 +141,20 @@ Second \"item\" text"</string>
@@ -1216,6 +1216,7 @@ index f21126b..4d07d93 100644
 +    <string name="morphe_external_downloader_quick_menu_title">Quick download menu</string>
 +    <string name="morphe_external_downloader_quick_menu_summary">Download shows the qualities and file sizes before downloading. Works with YTindir</string>
 +    <string name="morphe_external_downloader_quick_menu_header">Quick download</string>
++    <string name="morphe_external_downloader_quick_options">All options</string>
 +    <string name="morphe_external_downloader_quick_best_quality">Best quality</string>
 +    <string name="morphe_external_downloader_quick_better_quality">Better quality</string>
 +    <string name="morphe_external_downloader_quick_recommended">Recommended</string>
@@ -1225,16 +1226,15 @@ index f21126b..4d07d93 100644
 +    <string name="morphe_external_downloader_quick_thumbnail_summary">Original size</string>
 +    <string name="morphe_external_downloader_quick_quality">Download quality</string>
 +    <string name="morphe_external_downloader_quick_audio_only">Audio only</string>
-+    <string name="morphe_external_downloader_quick_all_formats">All formats</string>
 +    <string name="morphe_external_downloader_quick_download">Download</string>
      <string name="morphe_music_downloads_screen_title">Downloads</string>
      <string name="morphe_music_downloads_empty">"No downloads
  Downloaded tracks appear here"</string>
 diff --git a/patches/src/main/resources/addresources/values/youtube/strings.xml b/patches/src/main/resources/addresources/values/youtube/strings.xml
-index 8179a99..ce5b11b 100644
+index 8179a99..3197307 100644
 --- a/patches/src/main/resources/addresources/values/youtube/strings.xml
 +++ b/patches/src/main/resources/addresources/values/youtube/strings.xml
-@@ -591,12 +591,21 @@ After a video with the Ask button is opened once, the feature works with all vid
+@@ -591,12 +591,20 @@ After a video with the Ask button is opened once, the feature works with all vid
      <string name="morphe_external_downloader_quick_menu_summary">Prompts to download in the background. Tap and hold to open the downloader. Works with YTDLnis and YTindir</string>
      <string name="morphe_external_downloader_mark_watched_title">Mark downloads as watched</string>
      <string name="morphe_external_downloader_mark_watched_summary">Videos downloaded with an external downloader are added to your YouTube watch history</string>
@@ -1253,7 +1253,6 @@ index 8179a99..ce5b11b 100644
 +    <string name="morphe_external_downloader_quick_thumbnail_summary">Original size</string>
 +    <string name="morphe_external_downloader_quick_quality">Download quality</string>
 +    <string name="morphe_external_downloader_quick_audio_only">Audio only</string>
-+    <string name="morphe_external_downloader_quick_all_formats">All formats</string>
 +    <string name="morphe_external_downloader_quick_download">Download</string>
      <string name="morphe_shorts_download_flyout_button_title">Show download in Shorts menu</string>
      <string name="morphe_shorts_download_flyout_button_summary">Adds a download item to the menu of the Shorts player</string>

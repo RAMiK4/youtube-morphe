@@ -207,5 +207,4 @@ Seçilen altyazılar %3$s klasörüne kaydedilir"</string>
     <string name="morphe_external_downloader_quick_thumbnail_summary">Orijinal boyut</string>
     <string name="morphe_external_downloader_quick_quality">İndirme kalitesi</string>
     <string name="morphe_external_downloader_quick_audio_only">Yalnızca ses</string>
-    <string name="morphe_external_downloader_quick_all_formats">Tüm formatlar</string>
     <string name="morphe_external_downloader_quick_download">İndir</string>
