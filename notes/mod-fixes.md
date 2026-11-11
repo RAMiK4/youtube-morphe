@@ -1,5 +1,9 @@
 <!-- Fixes of the mod, listed in the release notes and the in-app changelog after the Morphe bug fixes of the same patches version. -->
 
+## 2.2.0
+
+* **Theme:** Playback speed, video quality and other player menus use the theme color, such as `#0F0F0F` / `#F0F0F0` of the Original variant
+
 ## 2.1.0
 
 * **Theme:** Menus use the dark color `#0F0F0F` of the Original variant

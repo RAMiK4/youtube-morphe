@@ -1,0 +1,29 @@
+diff --git a/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/LegacyPlayerControlButton.java b/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/LegacyPlayerControlButton.java
+index fdaa4de..86b34c4 100644
+--- a/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/LegacyPlayerControlButton.java
++++ b/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/LegacyPlayerControlButton.java
+@@ -27,6 +27,8 @@ import app.morphe.extension.shared.Logger;
+ import app.morphe.extension.shared.ResourceUtils;
+ import app.morphe.extension.shared.Utils;
+ import app.morphe.extension.shared.settings.BooleanSetting;
++import app.morphe.extension.shared.theme.ThemeColorPatch;
++import app.morphe.extension.shared.theme.ThemeUtils;
+ 
+ public class LegacyPlayerControlButton {
+ 
+@@ -61,6 +63,15 @@ public class LegacyPlayerControlButton {
+      * Returns the appropriate dialog background color depending on the current theme.
+      */
+     public static int getDialogBackgroundColor() {
++        // A selected theme color is used for the menus as well, like the menus of the app.
++        // The app colors are read without the theme, so they would keep the color the app ships with.
++        // Pure black keeps the app color, the menus would not stand out from the background.
++        if (ThemeColorPatch.isPatchIncluded() && !ThemeColorPatch.isAppDefaultColor()) {
++            final int themeColor = ThemeUtils.getAppBackgroundColor();
++            if (themeColor != Color.BLACK) {
++                return themeColor;
++            }
++        }
+         return ResourceUtils.getColor(Utils.isDarkModeEnabled() ? "yt_black1" : "yt_white1");
+     }
+ 
