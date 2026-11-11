@@ -2,6 +2,10 @@
      Only for releases that skip versions (such as the first dev build after a stable one), or for a new feature of the mod
      in that version (such as a change of addons/morphe/); most versions have no section. -->
 
+## 2.2.0
+
+* **Downloads:** Quick download menu with qualities and file sizes (YTindir): tap a quality to choose it, then Download, or open the download window of the downloader with All options
+
 ## 2.2.0-dev.2
 
 * **Downloads:** Show qualities and file sizes in the quick download menu (YTindir)
