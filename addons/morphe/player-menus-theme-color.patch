@@ -1,5 +1,5 @@
 diff --git a/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/LegacyPlayerControlButton.java b/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/LegacyPlayerControlButton.java
-index fdaa4de..86b34c4 100644
+index fdaa4de..59def7c 100644
 --- a/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/LegacyPlayerControlButton.java
 +++ b/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/LegacyPlayerControlButton.java
 @@ -27,6 +27,8 @@ import app.morphe.extension.shared.Logger;
@@ -11,18 +11,22 @@ index fdaa4de..86b34c4 100644
  
  public class LegacyPlayerControlButton {
  
-@@ -61,6 +63,15 @@ public class LegacyPlayerControlButton {
+@@ -57,10 +59,19 @@ public class LegacyPlayerControlButton {
+         return totalUpperButtonCount;
+     }
+ 
++    private static final int PURE_BLACK_MENU_COLOR = 0xFF0F0F0F;
++
+     /**
       * Returns the appropriate dialog background color depending on the current theme.
       */
      public static int getDialogBackgroundColor() {
-+        // A selected theme color is used for the menus as well, like the menus of the app.
-+        // The app colors are read without the theme, so they would keep the color the app ships with.
-+        // Pure black keeps the app color, the menus would not stand out from the background.
-+        if (ThemeColorPatch.isPatchIncluded() && !ThemeColorPatch.isAppDefaultColor()) {
++        // The menus have the theme color, like the menus of the app. The app colors are read
++        // without the theme here, so they would keep the color the app ships with.
++        // Menus of a pure black theme are #0F0F0F, so that they stand out from the background.
++        if (ThemeColorPatch.isPatchIncluded()) {
 +            final int themeColor = ThemeUtils.getAppBackgroundColor();
-+            if (themeColor != Color.BLACK) {
-+                return themeColor;
-+            }
++            return themeColor == Color.BLACK ? PURE_BLACK_MENU_COLOR : themeColor;
 +        }
          return ResourceUtils.getColor(Utils.isDarkModeEnabled() ? "yt_black1" : "yt_white1");
      }

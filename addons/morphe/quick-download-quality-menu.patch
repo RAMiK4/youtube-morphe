@@ -347,10 +347,10 @@ index 0000000..0efc4e8
 +}
 diff --git a/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/downloads/QuickDownloadMenu.java b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/downloads/QuickDownloadMenu.java
 new file mode 100644
-index 0000000..3f13692
+index 0000000..96b880d
 --- /dev/null
 +++ b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/downloads/QuickDownloadMenu.java
-@@ -0,0 +1,653 @@
+@@ -0,0 +1,657 @@
 +/*
 + * Copyright 2026 Morphe.
 + * https://github.com/MorpheApp/morphe-patches/pull/4539
@@ -424,7 +424,8 @@ index 0000000..3f13692
 +    public interface Launcher {
 +        /**
 +         * @param quickDownloadType "video", "audio" or "thumbnail" to queue the download in the background,
-+         *                          null to open the downloader with all its options.
++         *                          null to open the downloader with all its options
++         *                          ({@code FORMAT_LIST} "all" in the extras: on its full format list).
 +         * @param quickExtras       Extras that replace the default quality of a quick download,
 +         *                          see {@link ExternalDownloaderPreference#launchExternalDownloader(String, Context, String, String, Bundle)}.
 +         */
@@ -604,7 +605,10 @@ index 0000000..3f13692
 +                backgroundColor != null ? backgroundColor : ThemeUtils.getDialogBackgroundColor(),
 +                () -> {
 +                    dialog.dismiss();
-+                    launcher.launch(null, null);
++                    // YTindir opens its full format list instead of its own quick list.
++                    Bundle extras = new Bundle();
++                    extras.putString("FORMAT_LIST", "all");
++                    launcher.launch(null, extras);
 +                },
 +                () -> {
 +                    Option option = marked;
@@ -1017,10 +1021,10 @@ index 21bbca3..fe461c4 100644
      // Spoof app version
      public static final BooleanSetting SPOOF_APP_VERSION = new BooleanSetting("morphe_spoof_app_version", FALSE, true, "morphe_spoof_app_version_user_dialog_message");
 diff --git a/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/preference/ExternalDownloaderPreference.java b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/preference/ExternalDownloaderPreference.java
-index 594e16f..b7a0e71 100644
+index 594e16f..71d7458 100644
 --- a/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/preference/ExternalDownloaderPreference.java
 +++ b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/preference/ExternalDownloaderPreference.java
-@@ -216,6 +216,17 @@ public class ExternalDownloaderPreference extends CustomDialogListPreference {
+@@ -216,6 +216,18 @@ public class ExternalDownloaderPreference extends CustomDialogListPreference {
       */
      public static boolean launchExternalDownloader(String videoId, @Nullable Context context, String url,
                                                     @Nullable String quickDownloadType) {
@@ -1029,7 +1033,8 @@ index 594e16f..b7a0e71 100644
 +
 +    /**
 +     * @param quickExtras Extras of a quick download that replace the default quality,
-+     *                    for example {@code VIDEO_QUALITY}, {@code VIDEO_CODEC} or {@code AUDIO_FORMAT}.
++     *                    for example {@code VIDEO_QUALITY}, {@code VIDEO_CODEC} or {@code AUDIO_FORMAT},
++     *                    or of the downloader opened with all its options, such as {@code FORMAT_LIST}.
 +     * @return If the downloader was opened.
 +     */
 +    public static boolean launchExternalDownloader(String videoId, @Nullable Context context, String url,
@@ -1038,16 +1043,16 @@ index 594e16f..b7a0e71 100644
          try {
              Objects.requireNonNull(videoId);
              if (context == null) {
-@@ -242,6 +253,9 @@ public class ExternalDownloaderPreference extends CustomDialogListPreference {
-                 intent.putExtra("BACKGROUND", true);
+@@ -243,6 +255,9 @@ public class ExternalDownloaderPreference extends CustomDialogListPreference {
                  intent.putExtra("VIDEO_QUALITY", QUICK_DOWNLOAD_VIDEO_HEIGHT);
                  intent.putExtra("AUDIO_BITRATE", QUICK_DOWNLOAD_AUDIO_KBPS);
-+                if (quickExtras != null) {
-+                    intent.putExtras(quickExtras);
-+                }
              }
++            if (quickExtras != null) {
++                intent.putExtras(quickExtras);
++            }
              // Opening the downloader is not the user leaving the app.
              // Without this flag a playing video enters picture-in-picture,
+             // and the downloader's window opens over the home screen instead of over the video.
 diff --git a/extensions/shared-youtube/library/src/main/proto/app/morphe/extension/shared/innertube/player_response.proto b/extensions/shared-youtube/library/src/main/proto/app/morphe/extension/shared/innertube/player_response.proto
 index 9e119a3..b000a34 100644
 --- a/extensions/shared-youtube/library/src/main/proto/app/morphe/extension/shared/innertube/player_response.proto
