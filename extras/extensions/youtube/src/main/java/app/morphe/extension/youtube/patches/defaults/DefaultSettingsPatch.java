@@ -78,6 +78,9 @@ public final class DefaultSettingsPatch {
 
             final boolean rebootNeeded = applyDefaults(activity, preferences);
 
+            // Importing a preset settings file keeps the whitelisted channels.
+            ChannelWhitelistKeeper.register();
+
             // First start of a new build: a fresh install or an update.
             final long build = UpdateCheckerPatch.currentBuildNumber();
             final boolean newBuild = build > 0 && build != preferences.getLong(LAST_BUILD, -1);
