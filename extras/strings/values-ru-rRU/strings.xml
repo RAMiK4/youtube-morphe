@@ -205,3 +205,7 @@
     <string name="morphe_external_downloader_quick_source_audio">Исходный звук</string>
     <string name="morphe_external_downloader_quick_thumbnail">Обложка</string>
     <string name="morphe_external_downloader_quick_thumbnail_summary">Исходный размер</string>
+    <string name="morphe_external_downloader_quick_quality">Качество загрузки</string>
+    <string name="morphe_external_downloader_quick_audio_only">Только аудио</string>
+    <string name="morphe_external_downloader_quick_all_formats">Все форматы</string>
+    <string name="morphe_external_downloader_quick_download">Скачать</string>

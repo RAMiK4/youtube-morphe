@@ -1,627 +1,75 @@
-diff --git a/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/preference/ExternalDownloaderPreference.java b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/preference/ExternalDownloaderPreference.java
-index 594e16f64..b7a0e711e 100644
---- a/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/preference/ExternalDownloaderPreference.java
-+++ b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/preference/ExternalDownloaderPreference.java
-@@ -216,6 +216,17 @@ public class ExternalDownloaderPreference extends CustomDialogListPreference {
-      */
-     public static boolean launchExternalDownloader(String videoId, @Nullable Context context, String url,
-                                                    @Nullable String quickDownloadType) {
-+        return launchExternalDownloader(videoId, context, url, quickDownloadType, null);
-+    }
-+
-+    /**
-+     * @param quickExtras Extras of a quick download that replace the default quality,
-+     *                    for example {@code VIDEO_QUALITY}, {@code VIDEO_CODEC} or {@code AUDIO_FORMAT}.
-+     * @return If the downloader was opened.
-+     */
-+    public static boolean launchExternalDownloader(String videoId, @Nullable Context context, String url,
-+                                                   @Nullable String quickDownloadType,
-+                                                   @Nullable Bundle quickExtras) {
-         try {
-             Objects.requireNonNull(videoId);
-             if (context == null) {
-@@ -242,6 +253,9 @@ public class ExternalDownloaderPreference extends CustomDialogListPreference {
-                 intent.putExtra("BACKGROUND", true);
-                 intent.putExtra("VIDEO_QUALITY", QUICK_DOWNLOAD_VIDEO_HEIGHT);
-                 intent.putExtra("AUDIO_BITRATE", QUICK_DOWNLOAD_AUDIO_KBPS);
-+                if (quickExtras != null) {
-+                    intent.putExtras(quickExtras);
-+                }
-             }
-             // Opening the downloader is not the user leaving the app.
-             // Without this flag a playing video enters picture-in-picture,
-diff --git a/extensions/shared-youtube/library/src/main/proto/app/morphe/extension/shared/innertube/player_response.proto b/extensions/shared-youtube/library/src/main/proto/app/morphe/extension/shared/innertube/player_response.proto
-index fdd7d4db7..b90a468a8 100644
---- a/extensions/shared-youtube/library/src/main/proto/app/morphe/extension/shared/innertube/player_response.proto
-+++ b/extensions/shared-youtube/library/src/main/proto/app/morphe/extension/shared/innertube/player_response.proto
-@@ -71,6 +71,8 @@ message Format {
-   optional string mimeType = 5;
-   optional string url = 2;
-   optional string signatureCipher = 48;
-+  optional int32 fps = 25;
-+  optional string qualityLabel = 26;
- }
- 
- message PlayerConfig {
-diff --git a/extensions/youtube/src/main/java/app/morphe/extension/youtube/patches/InAppDownloadsPatch.java b/extensions/youtube/src/main/java/app/morphe/extension/youtube/patches/InAppDownloadsPatch.java
-index e21cccd15..cb3b07a87 100644
---- a/extensions/youtube/src/main/java/app/morphe/extension/youtube/patches/InAppDownloadsPatch.java
-+++ b/extensions/youtube/src/main/java/app/morphe/extension/youtube/patches/InAppDownloadsPatch.java
-@@ -92,7 +92,7 @@ public final class InAppDownloadsPatch {
-      * Clients that answer with stream urls, which the app can save.
-      * The visionOS streams need no JavaScript challenge, whose unsolved streams the server sends slowly.
-      */
--    private static final List<ClientType> DOWNLOAD_CLIENTS = List.of(
-+    public static final List<ClientType> DOWNLOAD_CLIENTS = List.of(
-             ClientType.VISIONOS_1_03,
-             ClientType.VISIONOS_1_02,
-             ClientType.ANDROID_VR_DASH,
-diff --git a/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/ExternalDownloadButton.java b/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/ExternalDownloadButton.java
-index 46566c78b..c4d26c354 100644
---- a/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/ExternalDownloadButton.java
-+++ b/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/ExternalDownloadButton.java
-@@ -14,21 +14,39 @@ import static app.morphe.extension.shared.StringRef.str;
- 
- import android.content.Context;
- import android.content.res.ColorStateList;
-+import android.graphics.Bitmap;
-+import android.graphics.BitmapFactory;
-+import android.graphics.Color;
- import android.graphics.Typeface;
- import android.graphics.drawable.ColorDrawable;
- import android.graphics.drawable.Drawable;
-+import android.graphics.drawable.GradientDrawable;
- import android.graphics.drawable.RippleDrawable;
-+import android.os.Bundle;
-+import android.text.SpannableString;
-+import android.text.Spanned;
-+import android.text.TextUtils;
-+import android.text.format.Formatter;
-+import android.text.style.ForegroundColorSpan;
-+import android.text.style.RelativeSizeSpan;
- import android.view.Gravity;
- import android.view.View;
-+import android.view.ViewGroup;
-+import android.widget.FrameLayout;
- import android.widget.ImageView;
- import android.widget.LinearLayout;
- import android.widget.TextView;
- 
- import androidx.annotation.Nullable;
- 
-+import java.io.InputStream;
-+import java.net.HttpURLConnection;
-+
+diff --git a/extensions/music/src/main/java/app/morphe/extension/music/patches/DownloadsPatch.java b/extensions/music/src/main/java/app/morphe/extension/music/patches/DownloadsPatch.java
+index 94ea421..575c090 100644
+--- a/extensions/music/src/main/java/app/morphe/extension/music/patches/DownloadsPatch.java
++++ b/extensions/music/src/main/java/app/morphe/extension/music/patches/DownloadsPatch.java
+@@ -27,11 +27,13 @@ import app.morphe.extension.music.patches.components.SongMenuFilter;
+ import app.morphe.extension.music.patches.downloads.DownloadedMark;
+ import app.morphe.extension.music.patches.downloads.LocalDownloadManager;
+ import app.morphe.extension.music.patches.downloads.PlaylistDownloader;
++import app.morphe.extension.music.patches.spoof.SpoofVideoStreamsPatch;
+ import app.morphe.extension.music.settings.Settings;
+ import app.morphe.extension.music.shared.VideoInformation;
  import app.morphe.extension.shared.Logger;
  import app.morphe.extension.shared.ResourceUtils;
  import app.morphe.extension.shared.Utils;
-+import app.morphe.extension.shared.misc.MediaTime;
-+import app.morphe.extension.shared.requests.Requester;
- import app.morphe.extension.shared.settings.preference.ExternalDownloaderPreference;
- import app.morphe.extension.shared.theme.ThemeUtils;
- import app.morphe.extension.shared.ui.Dim;
-@@ -39,6 +57,7 @@ import app.morphe.extension.youtube.settings.Settings;
- import app.morphe.extension.youtube.shared.PipDismissHelper;
- import app.morphe.extension.youtube.shared.PlayerType;
- import app.morphe.extension.youtube.videoplayer.LegacyPlayerControlButton.ButtonVisibility;
-+import app.morphe.extension.youtube.videoplayer.QuickDownloadFormats.Codec;
++import app.morphe.extension.shared.downloads.QuickDownloadMenu;
+ import app.morphe.extension.shared.patches.DownloadMode;
+ import app.morphe.extension.shared.patches.components.ByteArrayFilterGroup;
+ import app.morphe.extension.shared.patches.components.ContextInterface;
+@@ -55,6 +57,9 @@ public final class DownloadsPatch {
  
- @SuppressWarnings("unused")
- public class ExternalDownloadButton {
-@@ -90,8 +109,16 @@ public class ExternalDownloadButton {
-      */
-     public static void launchDownloader(@Nullable Context context, String videoId,
-                                         @Nullable String quickDownloadType) {
-+        launchDownloader(context, videoId, quickDownloadType, null);
+     private static volatile String downloadButtonLabel = "";
+ 
++    private static final int QUICK_DOWNLOAD_MENU_DARK_COLOR = 0xFF212121;
++    private static final int QUICK_DOWNLOAD_MENU_ANIMATION_DURATION = 200;
++
+     /** Command field of the 'ypc/get_offline_upsell' endpoint. */
+     private static final int OFFLINE_UPSELL_ENDPOINT = 133724106;
+     /**
+@@ -205,8 +210,35 @@ public final class DownloadsPatch {
+             return;
+         }
+ 
+-        ExternalDownloaderPreference.launchExternalDownloader(
+-                videoId, Utils.getActivity(), "https://music.youtube.com/watch?v=" + videoId);
++        Activity activity = Utils.getActivity();
++        String url = "https://music.youtube.com/watch?v=" + videoId;
++        if (activity != null && Settings.EXTERNAL_DOWNLOADER_QUICK_MENU.get()
++                && ExternalDownloaderPreference.supportsQuickDownloadQuality()) {
++            showQuickDownloadMenu(activity, videoId, url);
++            return;
++        }
++
++        ExternalDownloaderPreference.launchExternalDownloader(videoId, activity, url);
 +    }
 +
 +    /**
-+     * @param quickExtras See {@link ExternalDownloaderPreference#launchExternalDownloader(String, Context, String, String, Bundle)}.
++     * The quick download menu with qualities and file sizes, the MP3 marked.
 +     */
-+    private static void launchDownloader(@Nullable Context context, String videoId,
-+                                         @Nullable String quickDownloadType, @Nullable Bundle quickExtras) {
-         if (ExternalDownloaderPreference.launchExternalDownloader(
--                videoId, context, "https://youtu.be/" + videoId, quickDownloadType)
-+                videoId, context, "https://youtu.be/" + videoId, quickDownloadType, quickExtras)
-                 && Settings.EXTERNAL_DOWNLOADER_MARK_WATCHED.get()
-                 && (PlayerType.getCurrent().isNoneOrHidden() || !videoId.equals(VideoInformation.getVideoId()))) {
-             MarkWatchedRequest.markWatched(videoId);
-@@ -135,13 +162,14 @@ public class ExternalDownloadButton {
-      *                while the menu is open, and feed menus are not for the playing video.
-      */
-     public static void showQuickDownloadMenu(Context context, String videoId) {
-+        if (ExternalDownloaderPreference.supportsQuickDownloadQuality()) {
-+            showQualityMenu(context, videoId);
-+            return;
-+        }
-         try {
--            final boolean showQuality = ExternalDownloaderPreference.supportsQuickDownloadQuality();
-             final int foregroundColor = ThemeUtils.getAppForegroundColor();
- 
--            SheetBottomDialog.DraggableLinearLayout mainLayout =
--                    SheetBottomDialog.createMainLayout(context, LegacyPlayerControlButton.getDialogBackgroundColor());
--            mainLayout.setPadding(0, 0, 0, Dim.dp8);
-+            SheetBottomDialog.DraggableLinearLayout mainLayout = createMenuLayout(context);
- 
-             TextView header = new TextView(context);
-             header.setText(str("morphe_external_downloader_quick_menu_header"));
-@@ -157,7 +185,6 @@ public class ExternalDownloadButton {
-             mainLayout.addView(createItem(context,
-                     "morphe_external_downloader_quick_video",
-                     str("morphe_external_downloader_quick_video"),
--                    showQuality ? str("morphe_external_downloader_quick_video_quality") : null,
-                     () -> {
-                         dialog.dismiss();
-                         launchDownloader(context, videoId, "video");
-@@ -165,51 +192,399 @@ public class ExternalDownloadButton {
-             mainLayout.addView(createItem(context,
-                     "morphe_external_downloader_quick_audio",
-                     str("morphe_external_downloader_quick_audio"),
--                    showQuality ? str("morphe_external_downloader_quick_audio_quality") : null,
-                     () -> {
-                         dialog.dismiss();
-                         launchDownloader(context, videoId, "audio");
-                     }));
- 
--            View divider = new View(context);
--            divider.setBackgroundColor((foregroundColor & 0x00FFFFFF) | 0x1F000000);
--            LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(
--                    LinearLayout.LayoutParams.MATCH_PARENT, Math.max(1, Dim.dp1));
--            dividerParams.setMargins(Dim.dp16, Dim.dp4, Dim.dp16, Dim.dp4);
--            mainLayout.addView(divider, dividerParams);
-+            addAllOptions(context, mainLayout, dialog, videoId);
- 
--            mainLayout.addView(createItem(context,
--                    "morphe_settings_screen_05_player",
--                    str("morphe_external_downloader_quick_options"),
--                    null,
-+            PipDismissHelper.dismissOnPip(dialog);
-+            dialog.show();
++    private static void showQuickDownloadMenu(Activity activity, String videoId, String url) {
++        try {
++            QuickDownloadMenu.create(activity, videoId,
++                    // The app draws its sheets lighter than its background.
++                    Utils.isDarkModeEnabled() ? QUICK_DOWNLOAD_MENU_DARK_COLOR : null,
++                    QUICK_DOWNLOAD_MENU_ANIMATION_DURATION,
++                    SpoofVideoStreamsPatch.getAvailableClients(),
++                    Settings.SPOOF_VIDEO_STREAMS_CLIENT_TYPE.get(),
++                    QuickDownloadMenu.Choice.MP3,
++                    (type, extras) -> ExternalDownloaderPreference.launchExternalDownloader(
++                            videoId, activity, url, type, extras)
++            ).show();
 +        } catch (Exception ex) {
 +            Logger.printException(() -> "showQuickDownloadMenu failure", ex);
 +        }
-+    }
-+
-+    /**
-+     * The quick download menu of downloaders that apply the requested quality (YTindir):
-+     * the video's thumbnail, title and length, 4K and 2K in the better of AV1 and VP9, 1080p and 720p
-+     * in H.264, audio only as M4A (the AAC stream as it is) or an MP3, and the JPG thumbnail.
-+     * Frame rates, codecs and file sizes are filled in once the video's streams are read.
-+     */
-+    private static void showQualityMenu(Context context, String videoId) {
-+        try {
-+            SheetBottomDialog.DraggableLinearLayout mainLayout = createMenuLayout(context);
-+            VideoHeader header = createVideoHeader(context);
-+            mainLayout.addView(header.view);
-+
-+            SheetBottomDialog.SlideDialog dialog =
-+                    SheetBottomDialog.createSlideDialog(context, mainLayout, LegacyPlayerControlButton.fadeInDuration);
-+
-+            // Video qualities.
-+            final int[] heights = QuickDownloadFormats.HEIGHTS;
-+            QualityRow[] videoRows = new QualityRow[heights.length];
-+            for (int i = 0; i < heights.length; i++) {
-+                final int height = heights[i];
-+                final boolean h264 = height <= QuickDownloadFormats.MAX_H264_HEIGHT;
-+                String codecs = h264
-+                        ? Codec.H264.displayName
-+                        : Codec.AV1.displayName + " / " + Codec.VP9.displayName;
-+                Bundle extras = new Bundle();
-+                extras.putInt("VIDEO_QUALITY", height);
-+                extras.putString("VIDEO_CODEC", h264 ? "h264" : "av1");
-+                videoRows[i] = createQualityRow(context, height + "p", qualityBadge(height),
-+                        codecs + DETAIL_SEPARATOR + str(qualityHint(height)), LOADING_SIZE,
-+                        () -> {
-+                            dialog.dismiss();
-+                            launchDownloader(context, videoId, "video", extras);
-+                        });
-+                mainLayout.addView(videoRows[i].view);
-+            }
-+
-+            addDivider(context, mainLayout);
-+
-+            // Audio only.
-+            QualityRow m4aRow = createQualityRow(context, "M4A", "≈" + DEFAULT_AAC_KBPS + " kbps",
-+                    "AAC" + DETAIL_SEPARATOR + str("morphe_external_downloader_quick_source_audio"),
-+                    LOADING_SIZE, audioLauncher(dialog, context, videoId, "m4a"));
-+            mainLayout.addView(m4aRow.view);
-+            QualityRow mp3Row = createQualityRow(context, "MP3",
-+                    ExternalDownloaderPreference.QUICK_DOWNLOAD_AUDIO_KBPS + " kbps",
-+                    "Opus → MP3" + DETAIL_SEPARATOR + str("morphe_external_downloader_quick_recommended"),
-+                    LOADING_SIZE, audioLauncher(dialog, context, videoId, "mp3"));
-+            mainLayout.addView(mp3Row.view);
-+
-+            // Thumbnail.
-+            QualityRow thumbnailRow = createQualityRow(context,
-+                    str("morphe_external_downloader_quick_thumbnail"), "JPG",
-+                    str("morphe_external_downloader_quick_thumbnail_summary"),
-+                    "≈" + Formatter.formatShortFileSize(context, DEFAULT_THUMBNAIL_BYTES),
-                     () -> {
-                         dialog.dismiss();
--                        launchDownloader(context, videoId, null);
--                    }));
-+                        launchDownloader(context, videoId, "thumbnail");
-+                    });
-+            mainLayout.addView(thumbnailRow.view);
-+
-+            addAllOptions(context, mainLayout, dialog, videoId);
- 
-             PipDismissHelper.dismissOnPip(dialog);
-             dialog.show();
-+
-+            Utils.runOnBackgroundThread(() -> {
-+                Bitmap bitmap = fetchThumbnail(videoId);
-+                if (bitmap != null) Utils.runOnMainThread(() -> header.thumbnail.setImageBitmap(bitmap));
-+            });
-+            Utils.runOnBackgroundThread(() -> {
-+                final long thumbnailBytes = QuickDownloadFormats.fetchThumbnailSize(videoId);
-+                // The real size, without the approximate sign.
-+                if (thumbnailBytes > 0) Utils.runOnMainThread(() ->
-+                        thumbnailRow.size.setText(formatSize(context, thumbnailBytes)));
-+            });
-+            Utils.runOnBackgroundThread(() -> {
-+                QuickDownloadFormats.Formats formats = QuickDownloadFormats.fetch(videoId);
-+                Utils.runOnMainThread(() -> showFormats(context, formats, header, videoRows, m4aRow, mp3Row));
-+            });
-         } catch (Exception ex) {
--            Logger.printException(() -> "showQuickDownloadMenu failure", ex);
-+            Logger.printException(() -> "showQualityMenu failure", ex);
-+        }
-+    }
-+
-+    private static void showFormats(Context context, @Nullable QuickDownloadFormats.Formats formats,
-+                                    VideoHeader header, QualityRow[] videoRows,
-+                                    QualityRow m4aRow, QualityRow mp3Row) {
-+        if (formats == null) {
-+            // Sizes unknown, every choice stays.
-+            for (QualityRow row : videoRows) row.size.setText("");
-+            m4aRow.size.setText("");
-+            mp3Row.size.setText("");
-+            return;
-         }
-+
-+        if (!TextUtils.isEmpty(formats.title())) {
-+            header.title.setText(formats.title());
-+            String name = str("morphe_external_downloader_quick_menu_header");
-+            header.subtitle.setText(TextUtils.isEmpty(formats.author())
-+                    ? name
-+                    : name + DETAIL_SEPARATOR + formats.author());
-+            header.subtitle.setVisibility(View.VISIBLE);
-+        }
-+        if (formats.lengthSeconds() > 0) {
-+            header.length.setText(MediaTime.format(formats.lengthSeconds() * 1000));
-+            header.length.setVisibility(View.VISIBLE);
-+        }
-+
-+        final int secondaryColor = withAlpha(ThemeUtils.getAppForegroundColor(), SECONDARY_TEXT_ALPHA);
-+        for (int i = 0; i < videoRows.length; i++) {
-+            QuickDownloadFormats.VideoQuality quality = formats.videos()[i];
-+            QualityRow row = videoRows[i];
-+            if (quality == null) {
-+                row.view.setVisibility(View.GONE);
-+                continue;
-+            }
-+            final int height = QuickDownloadFormats.HEIGHTS[i];
-+            row.title.setText(qualityTitle(height, quality.fps(), secondaryColor));
-+            row.detail.setText(quality.codec().displayName + DETAIL_SEPARATOR + str(qualityHint(height)));
-+            row.size.setText(formatSize(context, quality.bytes()));
-+        }
-+
-+        // Read from the stream: the real bitrate, without the approximate sign.
-+        if (formats.aacKbps() > 0) m4aRow.badge.setText(formats.aacKbps() + " kbps");
-+        m4aRow.size.setText(formatSize(context, formats.aacBytes()));
-+        // A constant bitrate MP3 of the stream's length.
-+        mp3Row.size.setText(formatSize(context, formats.mp3Bytes()));
-+    }
-+
-+    /** Text alpha of details and other secondary texts. */
-+    private static final int SECONDARY_TEXT_ALPHA = 0xA6;
-+    /** Alpha of dividers, badges and other faint backgrounds. */
-+    private static final int FAINT_BACKGROUND_ALPHA = 0x1F;
-+    private static final int RIPPLE_ALPHA = 0x33;
-+
-+    private static final String DETAIL_SEPARATOR = " · ";
-+    /** Size shown while the streams are read. */
-+    private static final String LOADING_SIZE = "…";
-+
-+    /** YouTube's AAC audio (itag 140), shown until the stream is read. */
-+    private static final int DEFAULT_AAC_KBPS = 128;
-+    /** A maxresdefault JPG is usually 100-300 KB. */
-+    private static final long DEFAULT_THUMBNAIL_BYTES = 200L * 1024;
-+
-+    private static final int THUMBNAIL_CONNECTION_TIMEOUT_MILLISECONDS = 10_000;
-+
-+    private static Runnable audioLauncher(SheetBottomDialog.SlideDialog dialog, Context context,
-+                                          String videoId, String audioFormat) {
-+        return () -> {
-+            dialog.dismiss();
-+            Bundle extras = new Bundle();
-+            extras.putString("AUDIO_FORMAT", audioFormat);
-+            launchDownloader(context, videoId, "audio", extras);
-+        };
-+    }
-+
-+    private static String qualityBadge(int height) {
-+        if (height >= 2160) return "4K";
-+        if (height >= 1440) return "2K";
-+        if (height >= 1080) return "FHD";
-+        return "HD";
-+    }
-+
-+    /** What a quality is good for, next to Full HD, the recommended one. */
-+    private static String qualityHint(int height) {
-+        if (height >= 2160) return "morphe_external_downloader_quick_best_quality";
-+        if (height >= 1440) return "morphe_external_downloader_quick_better_quality";
-+        if (height >= 1080) return "morphe_external_downloader_quick_recommended";
-+        return "morphe_external_downloader_quick_smaller_file";
-+    }
-+
-+    /** "1080p" with the frame rate after it, smaller and lighter: "1080p 60fps". */
-+    private static CharSequence qualityTitle(int height, int fps, int secondaryColor) {
-+        if (fps <= 0) return height + "p";
-+        String fpsText = " " + fps + "fps";
-+        SpannableString text = new SpannableString(height + "p" + fpsText);
-+        final int start = text.length() - fpsText.length();
-+        text.setSpan(new RelativeSizeSpan(0.75f), start, text.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-+        text.setSpan(new ForegroundColorSpan(secondaryColor), start, text.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-+        return text;
-+    }
-+
-+    private static String formatSize(Context context, long bytes) {
-+        return bytes > 0 ? Formatter.formatShortFileSize(context, bytes) : "";
-+    }
-+
-+    /**
-+     * Network request, call off the main thread.
-+     */
-+    @Nullable
-+    private static Bitmap fetchThumbnail(String videoId) {
-+        HttpURLConnection connection = null;
-+        try {
-+            connection = Requester.openConnection("https://i.ytimg.com/vi/" + videoId + "/mqdefault.jpg");
-+            connection.setConnectTimeout(THUMBNAIL_CONNECTION_TIMEOUT_MILLISECONDS);
-+            connection.setReadTimeout(THUMBNAIL_CONNECTION_TIMEOUT_MILLISECONDS);
-+            if (connection.getResponseCode() != Requester.HTTP_STATUS_CODE_SUCCESS) return null;
-+            try (InputStream input = connection.getInputStream()) {
-+                return BitmapFactory.decodeStream(input);
-+            }
-+        } catch (Exception ex) {
-+            Logger.printInfo(() -> "Could not load the thumbnail of: " + videoId, ex);
-+            return null;
-+        } finally {
-+            if (connection != null) connection.disconnect();
-+        }
-+    }
-+
-+    private static GradientDrawable rounded(int radius, int color) {
-+        GradientDrawable shape = new GradientDrawable();
-+        shape.setCornerRadius(radius);
-+        shape.setColor(color);
-+        return shape;
-+    }
-+
-+    private static int withAlpha(int color, int alpha) {
-+        return (color & 0x00FFFFFF) | (alpha << 24);
-+    }
-+
-+    private static SheetBottomDialog.DraggableLinearLayout createMenuLayout(Context context) {
-+        SheetBottomDialog.DraggableLinearLayout mainLayout =
-+                SheetBottomDialog.createMainLayout(context, LegacyPlayerControlButton.getDialogBackgroundColor());
-+        mainLayout.setPadding(0, 0, 0, Dim.dp8);
-+        return mainLayout;
-+    }
-+
-+    private static void addDivider(Context context, LinearLayout layout) {
-+        View divider = new View(context);
-+        divider.setBackgroundColor(withAlpha(ThemeUtils.getAppForegroundColor(), FAINT_BACKGROUND_ALPHA));
-+        LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(
-+                LinearLayout.LayoutParams.MATCH_PARENT, Math.max(1, Dim.dp1));
-+        dividerParams.setMargins(Dim.dp16, Dim.dp4, Dim.dp16, Dim.dp4);
-+        layout.addView(divider, dividerParams);
-+    }
-+
-+    /**
-+     * Adds a divider and the item that opens the downloader with all its options.
-+     */
-+    private static void addAllOptions(Context context, LinearLayout layout,
-+                                      SheetBottomDialog.SlideDialog dialog, String videoId) {
-+        addDivider(context, layout);
-+        layout.addView(createItem(context,
-+                "morphe_settings_screen_05_player",
-+                str("morphe_external_downloader_quick_options"),
-+                () -> {
-+                    dialog.dismiss();
-+                    launchDownloader(context, videoId, null);
-+                }));
-+    }
-+
-+    /** The views of the header that are filled in once the streams are read. */
-+    private record VideoHeader(View view, ImageView thumbnail, TextView length, TextView title, TextView subtitle) {
      }
  
--    private static View createItem(Context context, String iconName, String title,
--                                   @Nullable String detail, Runnable onClick) {
-+    /**
-+     * The video: thumbnail with its length, title, and the menu's name with the channel.
-+     * Until the streams are read only the menu's name is shown.
-+     */
-+    private static VideoHeader createVideoHeader(Context context) {
-         final int foregroundColor = ThemeUtils.getAppForegroundColor();
- 
--        LinearLayout row = new LinearLayout(context);
--        row.setOrientation(LinearLayout.HORIZONTAL);
--        row.setGravity(Gravity.CENTER_VERTICAL);
--        row.setMinimumHeight(Dim.dp48 + Dim.dp4);
-+        LinearLayout header = new LinearLayout(context);
-+        header.setOrientation(LinearLayout.HORIZONTAL);
-+        header.setGravity(Gravity.CENTER_VERTICAL);
-+        header.setPadding(Dim.dp16, Dim.dp4, Dim.dp16, Dim.dp8);
-+
-+        FrameLayout thumbnailFrame = new FrameLayout(context);
-+        ImageView thumbnail = new ImageView(context);
-+        thumbnail.setScaleType(ImageView.ScaleType.CENTER_CROP);
-+        thumbnail.setClipToOutline(true);
-+        thumbnail.setBackground(rounded(Dim.dp8, withAlpha(foregroundColor, FAINT_BACKGROUND_ALPHA)));
-+        thumbnailFrame.addView(thumbnail, new FrameLayout.LayoutParams(
-+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-+        TextView length = new TextView(context);
-+        length.setTextColor(Color.WHITE);
-+        length.setTextSize(11);
-+        length.setTypeface(Typeface.DEFAULT_BOLD);
-+        length.setBackground(rounded(Dim.dp4, 0xCC000000));
-+        length.setPadding(Dim.dp4, 0, Dim.dp4, 0);
-+        length.setVisibility(View.GONE);
-+        FrameLayout.LayoutParams lengthParams = new FrameLayout.LayoutParams(
-+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-+                Gravity.BOTTOM | Gravity.END);
-+        lengthParams.setMargins(Dim.dp4, Dim.dp4, Dim.dp4, Dim.dp4);
-+        thumbnailFrame.addView(length, lengthParams);
-+        header.addView(thumbnailFrame, new LinearLayout.LayoutParams(Dim.dp(96), Dim.dp(54)));
-+
-+        LinearLayout texts = new LinearLayout(context);
-+        texts.setOrientation(LinearLayout.VERTICAL);
-+        texts.setPadding(Dim.dp12, 0, 0, 0);
-+        TextView title = new TextView(context);
-+        title.setText(str("morphe_external_downloader_quick_menu_header"));
-+        title.setTextColor(foregroundColor);
-+        title.setTextSize(15);
-+        title.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-+        title.setMaxLines(2);
-+        title.setEllipsize(TextUtils.TruncateAt.END);
-+        texts.addView(title);
-+        TextView subtitle = new TextView(context);
-+        subtitle.setTextColor(withAlpha(foregroundColor, SECONDARY_TEXT_ALPHA));
-+        subtitle.setTextSize(13);
-+        subtitle.setSingleLine(true);
-+        subtitle.setEllipsize(TextUtils.TruncateAt.END);
-+        subtitle.setVisibility(View.GONE);
-+        texts.addView(subtitle);
-+        header.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-+
-+        return new VideoHeader(header, thumbnail, length, title, subtitle);
-+    }
-+
-+    /** The views of a row that are filled in once the streams are read. */
-+    private record QualityRow(View view, TextView title, TextView badge, TextView detail, TextView size) {
-+    }
-+
-+    /**
-+     * A row like the quality list of YouTube's own download menu:
-+     * quality and badge over the codec, the file size at the end.
-+     */
-+    private static QualityRow createQualityRow(Context context, String title, String badge,
-+                                               String detail, String size, Runnable onClick) {
-+        final int foregroundColor = ThemeUtils.getAppForegroundColor();
-+
-+        LinearLayout row = createRow(context, foregroundColor, onClick);
-+        row.setPadding(Dim.dp16, Dim.dp4, Dim.dp16, Dim.dp4);
-+
-+        LinearLayout texts = new LinearLayout(context);
-+        texts.setOrientation(LinearLayout.VERTICAL);
-+
-+        LinearLayout titleLine = new LinearLayout(context);
-+        titleLine.setOrientation(LinearLayout.HORIZONTAL);
-+        titleLine.setGravity(Gravity.CENTER_VERTICAL);
-+        TextView titleView = new TextView(context);
-+        titleView.setText(title);
-+        titleView.setTextColor(foregroundColor);
-+        titleView.setTextSize(16);
-+        titleView.setSingleLine(true);
-+        titleLine.addView(titleView);
-+        TextView badgeView = new TextView(context);
-+        badgeView.setText(badge);
-+        badgeView.setTextColor(foregroundColor);
-+        badgeView.setTextSize(10);
-+        badgeView.setTypeface(Typeface.DEFAULT_BOLD);
-+        badgeView.setSingleLine(true);
-+        badgeView.setBackground(rounded(Dim.dp4, withAlpha(foregroundColor, FAINT_BACKGROUND_ALPHA)));
-+        badgeView.setPadding(Dim.dp4 + Dim.dp1, Dim.dp1, Dim.dp4 + Dim.dp1, Dim.dp1);
-+        LinearLayout.LayoutParams badgeParams = new LinearLayout.LayoutParams(
-+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-+        badgeParams.setMarginStart(Dim.dp8);
-+        titleLine.addView(badgeView, badgeParams);
-+        texts.addView(titleLine);
-+
-+        TextView detailView = new TextView(context);
-+        detailView.setText(detail);
-+        detailView.setTextColor(withAlpha(foregroundColor, SECONDARY_TEXT_ALPHA));
-+        detailView.setTextSize(13);
-+        detailView.setSingleLine(true);
-+        detailView.setEllipsize(TextUtils.TruncateAt.END);
-+        texts.addView(detailView);
-+
-+        row.addView(texts, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
-+
-+        TextView sizeView = new TextView(context);
-+        sizeView.setText(size);
-+        sizeView.setTextColor(foregroundColor);
-+        sizeView.setTextSize(14);
-+        sizeView.setSingleLine(true);
-+        LinearLayout.LayoutParams sizeParams = new LinearLayout.LayoutParams(
-+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-+        sizeParams.setMarginStart(Dim.dp12);
-+        row.addView(sizeView, sizeParams);
-+
-+        return new QualityRow(row, titleView, badgeView, detailView, sizeView);
-+    }
-+
-+    private static View createItem(Context context, String iconName, String title, Runnable onClick) {
-+        final int foregroundColor = ThemeUtils.getAppForegroundColor();
-+
-+        LinearLayout row = createRow(context, foregroundColor, onClick);
-         row.setPadding(Dim.dp16, 0, Dim.dp16, 0);
--        row.setClickable(true);
--        row.setFocusable(true);
--        row.setBackground(new RippleDrawable(
--                ColorStateList.valueOf((foregroundColor & 0x00FFFFFF) | 0x33000000),
--                null,
--                new ColorDrawable(0xFFFFFFFF)));
--        row.setOnClickListener(v -> onClick.run());
- 
-         Drawable icon = getIcon(context, iconName);
-         if (icon != null) {
-@@ -228,18 +603,24 @@ public class ExternalDownloadButton {
-         titleView.setSingleLine(true);
-         row.addView(titleView, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
- 
--        if (detail != null) {
--            TextView detailView = new TextView(context);
--            detailView.setText(detail);
--            detailView.setTextColor((foregroundColor & 0x00FFFFFF) | 0xA6000000);
--            detailView.setTextSize(14);
--            detailView.setSingleLine(true);
--            LinearLayout.LayoutParams detailParams = new LinearLayout.LayoutParams(
--                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
--            detailParams.setMarginStart(Dim.dp12);
--            row.addView(detailView, detailParams);
--        }
-+        return row;
-+    }
- 
-+    /**
-+     * A clickable menu row with a ripple.
-+     */
-+    private static LinearLayout createRow(Context context, int foregroundColor, Runnable onClick) {
-+        LinearLayout row = new LinearLayout(context);
-+        row.setOrientation(LinearLayout.HORIZONTAL);
-+        row.setGravity(Gravity.CENTER_VERTICAL);
-+        row.setMinimumHeight(Dim.dp48 + Dim.dp4);
-+        row.setClickable(true);
-+        row.setFocusable(true);
-+        row.setBackground(new RippleDrawable(
-+                ColorStateList.valueOf(withAlpha(foregroundColor, RIPPLE_ALPHA)),
-+                null,
-+                new ColorDrawable(0xFFFFFFFF)));
-+        row.setOnClickListener(v -> onClick.run());
-         return row;
-     }
- 
-diff --git a/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/QuickDownloadFormats.java b/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/QuickDownloadFormats.java
+     private static void openLocalDownloads() {
+diff --git a/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/downloads/QuickDownloadFormats.java b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/downloads/QuickDownloadFormats.java
 new file mode 100644
-index 000000000..b6a08680b
+index 0000000..0efc4e8
 --- /dev/null
-+++ b/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/QuickDownloadFormats.java
-@@ -0,0 +1,272 @@
++++ b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/downloads/QuickDownloadFormats.java
+@@ -0,0 +1,275 @@
 +/*
 + * Copyright 2026 Morphe.
 + * https://github.com/MorpheApp/morphe-patches/pull/4539
@@ -629,11 +77,12 @@ index 000000000..b6a08680b
 + * See the included NOTICE file for GPLv3 Section 7 terms that apply to this code.
 + */
 +
-+package app.morphe.extension.youtube.videoplayer;
++package app.morphe.extension.shared.downloads;
 +
 +import androidx.annotation.Nullable;
 +
 +import java.net.HttpURLConnection;
++import java.util.List;
 +import java.util.Locale;
 +import java.util.regex.Matcher;
 +import java.util.regex.Pattern;
@@ -644,8 +93,8 @@ index 000000000..b6a08680b
 +import app.morphe.extension.shared.innertube.PlayerResponseOuterClass.VideoDetails;
 +import app.morphe.extension.shared.requests.Requester;
 +import app.morphe.extension.shared.settings.preference.ExternalDownloaderPreference;
++import app.morphe.extension.shared.spoof.ClientType;
 +import app.morphe.extension.shared.spoof.requests.StreamingDataRequest;
-+import app.morphe.extension.youtube.patches.InAppDownloadsPatch;
 +
 +/**
 + * Formats of a video for the quick download menu, read from the video's streams.
@@ -657,7 +106,7 @@ index 000000000..b6a08680b
 +final class QuickDownloadFormats {
 +
 +    /** The video qualities of the menu, highest first. */
-+    static final int[] HEIGHTS = {2160, 1440, 1080, 720};
++    static final int[] HEIGHTS = {2160, 1440, 1080, 720, 480, 360, 240, 144};
 +
 +    /** YouTube has no H.264 streams above this height. */
 +    static final int MAX_H264_HEIGHT = 1080;
@@ -765,13 +214,15 @@ index 000000000..b6a08680b
 +    /**
 +     * Network request, call off the main thread.
 +     *
++     * @param clients         Clients that answer with stream urls.
++     * @param preferredClient Client tried first.
 +     * @return Null if the streams could not be read.
 +     */
 +    @Nullable
-+    static Formats fetch(String videoId) {
++    static Formats fetch(String videoId, List<ClientType> clients, ClientType preferredClient) {
 +        try {
-+            StreamingDataRequest.StreamData stream = StreamingDataRequest.fetchRequestForDownload(videoId,
-+                    InAppDownloadsPatch.DOWNLOAD_CLIENTS, InAppDownloadsPatch.DOWNLOAD_CLIENTS.get(0)).getStream();
++            StreamingDataRequest.StreamData stream = StreamingDataRequest.fetchRequestForDownload(
++                    videoId, clients, preferredClient).getStream();
 +            if (stream == null) {
 +                Logger.printDebug(() -> "No streams for the quick download formats of: " + videoId);
 +                return null;
@@ -894,11 +345,891 @@ index 000000000..b6a08680b
 +        return 0;
 +    }
 +}
+diff --git a/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/downloads/QuickDownloadMenu.java b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/downloads/QuickDownloadMenu.java
+new file mode 100644
+index 0000000..3f13692
+--- /dev/null
++++ b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/downloads/QuickDownloadMenu.java
+@@ -0,0 +1,653 @@
++/*
++ * Copyright 2026 Morphe.
++ * https://github.com/MorpheApp/morphe-patches/pull/4539
++ *
++ * See the included NOTICE file for GPLv3 Section 7 terms that apply to this code.
++ */
++
++package app.morphe.extension.shared.downloads;
++
++import static app.morphe.extension.shared.StringRef.str;
++
++import android.content.Context;
++import android.content.res.ColorStateList;
++import android.graphics.Canvas;
++import android.graphics.ColorFilter;
++import android.graphics.Paint;
++import android.graphics.Path;
++import android.graphics.PixelFormat;
++import android.graphics.Rect;
++import android.graphics.Typeface;
++import android.graphics.drawable.ColorDrawable;
++import android.graphics.drawable.Drawable;
++import android.graphics.drawable.GradientDrawable;
++import android.graphics.drawable.RippleDrawable;
++import android.os.Bundle;
++import android.text.SpannableString;
++import android.text.Spanned;
++import android.text.TextUtils;
++import android.text.format.Formatter;
++import android.text.style.ForegroundColorSpan;
++import android.text.style.RelativeSizeSpan;
++import android.view.Gravity;
++import android.view.View;
++import android.view.ViewGroup;
++import android.widget.ImageView;
++import android.widget.LinearLayout;
++import android.widget.ScrollView;
++import android.widget.TextView;
++
++import androidx.annotation.NonNull;
++import androidx.annotation.Nullable;
++
++import java.util.ArrayList;
++import java.util.List;
++import java.util.Objects;
++
++import app.morphe.extension.shared.Utils;
++import app.morphe.extension.shared.downloads.QuickDownloadFormats.Codec;
++import app.morphe.extension.shared.misc.MediaTime;
++import app.morphe.extension.shared.settings.preference.ExternalDownloaderPreference;
++import app.morphe.extension.shared.spoof.ClientType;
++import app.morphe.extension.shared.theme.ThemeUtils;
++import app.morphe.extension.shared.ui.Dim;
++import app.morphe.extension.shared.ui.SheetBottomDialog;
++
++/**
++ * The quick download menu of downloaders that apply the requested quality (YTindir),
++ * laid out like the quick list of YTindir:
++ * the title with the channel and length, the video qualities (4K and 2K in the better of AV1 and VP9,
++ * 1080p and below in H.264), audio only as M4A (the AAC stream as it is) or an MP3, and the JPG thumbnail.
++ * Frame rates, codecs and file sizes are filled in once the video's streams are read.
++ * <p>
++ * A tap on a quality or an audio format marks it, and Download downloads the marked one.
++ * All formats opens the downloader with all its options. The thumbnail is downloaded right away.
++ */
++public final class QuickDownloadMenu {
++
++    /**
++     * Opens the downloader.
++     */
++    public interface Launcher {
++        /**
++         * @param quickDownloadType "video", "audio" or "thumbnail" to queue the download in the background,
++         *                          null to open the downloader with all its options.
++         * @param quickExtras       Extras that replace the default quality of a quick download,
++         *                          see {@link ExternalDownloaderPreference#launchExternalDownloader(String, Context, String, String, Bundle)}.
++         */
++        void launch(@Nullable String quickDownloadType, @Nullable Bundle quickExtras);
++    }
++
++    /**
++     * The choice that is marked when the menu opens.
++     */
++    public enum Choice {
++        /** Full HD, or the closest quality the video has. */
++        RECOMMENDED_VIDEO,
++        /** A {@link ExternalDownloaderPreference#QUICK_DOWNLOAD_AUDIO_KBPS} kbps MP3, for music. */
++        MP3
++    }
++
++    /** Text alpha of details and other secondary texts. */
++    private static final int SECONDARY_TEXT_ALPHA = 0xA6;
++    /** Alpha of dividers, badges and other faint backgrounds. */
++    private static final int FAINT_BACKGROUND_ALPHA = 0x1F;
++    /** Alpha of the background of the marked row. */
++    private static final int MARKED_BACKGROUND_ALPHA = 0x14;
++    /** Alpha of the outline of the All formats button. */
++    private static final int OUTLINE_ALPHA = 0x66;
++    private static final int RIPPLE_ALPHA = 0x33;
++
++    private static final String DETAIL_SEPARATOR = " · ";
++    /** Size shown while the streams are read. */
++    private static final String LOADING_SIZE = "…";
++
++    /** Lowest quality that is shown for videos that have HD. */
++    private static final int MIN_HD_HEIGHT = 720;
++    /** Lowest quality that is shown for videos without HD that have this quality. */
++    private static final int MIN_SD_HEIGHT = 480;
++
++    /** YouTube's AAC audio (itag 140), shown until the stream is read. */
++    private static final int DEFAULT_AAC_KBPS = 128;
++    /** A maxresdefault JPG is usually 100-300 KB. */
++    private static final long DEFAULT_THUMBNAIL_BYTES = 200L * 1024;
++
++    // Material icons, in a 24 x 24 viewport.
++    private static final float[][] ICON_CHECK = {
++            {9, 16.17f, 4.83f, 12, 3.41f, 13.41f, 9, 19, 21, 7, 19.59f, 5.59f}
++    };
++    private static final float[][] ICON_DOWNLOAD = {
++            {19, 9, 15, 9, 15, 3, 9, 3, 9, 9, 5, 9, 12, 16},
++            {5, 18, 19, 18, 19, 20, 5, 20}
++    };
++    private static final float[][] ICON_LIST = {
++            {3, 7, 5, 7, 5, 9, 3, 9}, {3, 11, 5, 11, 5, 13, 3, 13}, {3, 15, 5, 15, 5, 17, 3, 17},
++            {7, 7, 21, 7, 21, 9, 7, 9}, {7, 11, 21, 11, 21, 13, 7, 13}, {7, 15, 21, 15, 21, 17, 7, 17}
++    };
++
++    /**
++     * A choice of the menu: its row, and how the downloader is opened for it.
++     */
++    private static final class Option {
++        final Row row;
++        final String type;
++        final Bundle extras;
++
++        Option(Row row, String type, Bundle extras) {
++            this.row = row;
++            this.type = type;
++            this.extras = extras;
++        }
++    }
++
++    /** The views of a row that are filled in once the streams are read. */
++    private record Row(View view, TextView title, TextView badge, TextView detail, TextView size, View check) {
++    }
++
++    /** The views of the header that are filled in once the streams are read. */
++    private record Header(View view, TextView title, TextView subtitle) {
++    }
++
++    private final Context context;
++    private final int foregroundColor;
++    private final int secondaryColor;
++    private final List<Option> videoOptions = new ArrayList<>();
++    private final int[] videoHeights = QuickDownloadFormats.HEIGHTS;
++    @Nullable
++    private Option mp3Option;
++    @Nullable
++    private Option marked;
++    /** If the user marked a choice, which is then kept when the streams are read. */
++    private boolean markedByUser;
++
++    private QuickDownloadMenu(Context context) {
++        this.context = context;
++        this.foregroundColor = ThemeUtils.getAppForegroundColor();
++        this.secondaryColor = withAlpha(foregroundColor, SECONDARY_TEXT_ALPHA);
++    }
++
++    /**
++     * Creates the menu of a video, and starts reading its streams.
++     * The caller shows the dialog.
++     *
++     * @param backgroundColor   Background of the menu, null for the default.
++     * @param animationDuration Duration of the slide in animation.
++     * @param clients           Clients that answer with stream urls.
++     * @param preferredClient   Client tried first.
++     * @param choice            The choice marked when the menu opens.
++     * @param launcher          Opens the downloader for a choice.
++     */
++    public static SheetBottomDialog.SlideDialog create(Context context, String videoId,
++                                                       @Nullable Integer backgroundColor,
++                                                       int animationDuration,
++                                                       List<ClientType> clients,
++                                                       ClientType preferredClient,
++                                                       Choice choice, Launcher launcher) {
++        return new QuickDownloadMenu(context).build(videoId, backgroundColor, animationDuration,
++                clients, preferredClient, choice, launcher);
++    }
++
++    private SheetBottomDialog.SlideDialog build(String videoId, @Nullable Integer backgroundColor,
++                                                int animationDuration, List<ClientType> clients,
++                                                ClientType preferredClient, Choice choice,
++                                                Launcher launcher) {
++        SheetBottomDialog.DraggableLinearLayout mainLayout =
++                SheetBottomDialog.createMainLayout(context, backgroundColor);
++        mainLayout.setPadding(0, 0, 0, Dim.dp8);
++
++        Header header = createHeader();
++        mainLayout.addView(header.view);
++
++        // A long list scrolls, and the buttons under it stay on screen.
++        LinearLayout list = new LinearLayout(context);
++        list.setOrientation(LinearLayout.VERTICAL);
++        list.setPadding(0, 0, 0, Dim.dp4);
++        ScrollView scrollView = SheetBottomDialog.createCappedScrollView(context);
++        scrollView.addView(list);
++        mainLayout.addView(scrollView);
++
++        SheetBottomDialog.SlideDialog dialog =
++                SheetBottomDialog.createSlideDialog(context, mainLayout, animationDuration);
++
++        // Video qualities. The qualities below HD are shown only for videos without HD.
++        list.addView(createSectionHeader(str("morphe_external_downloader_quick_quality")));
++        for (final int height : videoHeights) {
++            final boolean h264 = height <= QuickDownloadFormats.MAX_H264_HEIGHT;
++            String codecs = h264
++                    ? Codec.H264.displayName
++                    : Codec.AV1.displayName + " / " + Codec.VP9.displayName;
++            Bundle extras = new Bundle();
++            extras.putInt("VIDEO_QUALITY", height);
++            extras.putString("VIDEO_CODEC", h264 ? "h264" : "av1");
++            Row row = createRow(height + "p", qualityBadge(height),
++                    codecs + DETAIL_SEPARATOR + str(qualityHint(height)), LOADING_SIZE);
++            if (height < MIN_HD_HEIGHT) row.view.setVisibility(View.GONE);
++            Option option = new Option(row, "video", extras);
++            row.view.setOnClickListener(v -> mark(option, true));
++            videoOptions.add(option);
++            list.addView(row.view);
++        }
++
++        // Audio only.
++        list.addView(createSectionHeader(str("morphe_external_downloader_quick_audio_only")));
++        Option m4a = addAudioOption(list, "m4a", "M4A", "≈" + DEFAULT_AAC_KBPS + " kbps",
++                "AAC" + DETAIL_SEPARATOR + str("morphe_external_downloader_quick_source_audio"));
++        Option mp3 = mp3Option = addAudioOption(list, "mp3", "MP3",
++                ExternalDownloaderPreference.QUICK_DOWNLOAD_AUDIO_KBPS + " kbps",
++                "Opus → MP3" + DETAIL_SEPARATOR + str("morphe_external_downloader_quick_recommended"));
++
++        // Thumbnail, downloaded right away.
++        addDivider(list);
++        Row thumbnailRow = createRow(str("morphe_external_downloader_quick_thumbnail"), "JPG",
++                str("morphe_external_downloader_quick_thumbnail_summary"),
++                "≈" + Formatter.formatShortFileSize(context, DEFAULT_THUMBNAIL_BYTES));
++        thumbnailRow.view.setOnClickListener(v -> {
++            dialog.dismiss();
++            launcher.launch("thumbnail", null);
++        });
++        list.addView(thumbnailRow.view);
++
++        mainLayout.addView(createButtons(
++                backgroundColor != null ? backgroundColor : ThemeUtils.getDialogBackgroundColor(),
++                () -> {
++                    dialog.dismiss();
++                    launcher.launch(null, null);
++                },
++                () -> {
++                    Option option = marked;
++                    if (option == null) return;
++                    dialog.dismiss();
++                    launcher.launch(option.type, option.extras);
++                }));
++
++        mark(choice == Choice.MP3 ? mp3 : videoOptions.get(indexOfHeight(QuickDownloadFormats.MAX_H264_HEIGHT)), false);
++
++        Utils.runOnBackgroundThread(() -> {
++            final long thumbnailBytes = QuickDownloadFormats.fetchThumbnailSize(videoId);
++            // The real size, without the approximate sign.
++            if (thumbnailBytes > 0) Utils.runOnMainThread(() ->
++                    thumbnailRow.size.setText(formatSize(thumbnailBytes)));
++        });
++        Utils.runOnBackgroundThread(() -> {
++            QuickDownloadFormats.Formats formats = QuickDownloadFormats.fetch(videoId, clients, preferredClient);
++            Utils.runOnMainThread(() -> showFormats(formats, header, m4a.row, mp3.row));
++        });
++
++        return dialog;
++    }
++
++    private Option addAudioOption(LinearLayout list, String audioFormat, String title, String badge, String detail) {
++        Row row = createRow(title, badge, detail, LOADING_SIZE);
++        Bundle extras = new Bundle();
++        extras.putString("AUDIO_FORMAT", audioFormat);
++        Option option = new Option(row, "audio", extras);
++        row.view.setOnClickListener(v -> mark(option, true));
++        list.addView(row.view);
++        return option;
++    }
++
++    private void mark(Option option, boolean byUser) {
++        if (marked != null) setMarked(marked.row, false);
++        marked = option;
++        markedByUser |= byUser;
++        setMarked(option.row, true);
++    }
++
++    private void setMarked(Row row, boolean isMarked) {
++        row.check.setVisibility(isMarked ? View.VISIBLE : View.GONE);
++        row.view.setSelected(isMarked);
++        row.view.setBackground(createRowBackground(isMarked));
++    }
++
++    private void showFormats(@Nullable QuickDownloadFormats.Formats formats, Header header, Row m4aRow, Row mp3Row) {
++        if (formats == null) {
++            // Sizes unknown, every HD choice stays.
++            for (Option option : videoOptions) option.row.size.setText("");
++            m4aRow.size.setText("");
++            mp3Row.size.setText("");
++            return;
++        }
++
++        if (!TextUtils.isEmpty(formats.title())) {
++            header.title.setText(formats.title());
++        }
++        List<String> details = new ArrayList<>();
++        if (!TextUtils.isEmpty(formats.author())) details.add(formats.author());
++        if (formats.lengthSeconds() > 0) details.add(MediaTime.format(formats.lengthSeconds() * 1000));
++        if (!details.isEmpty()) {
++            header.subtitle.setText(TextUtils.join(DETAIL_SEPARATOR, details));
++            header.subtitle.setVisibility(View.VISIBLE);
++        }
++
++        // 480p only for videos without HD, and the qualities below it only for videos without 480p either.
++        int bestHeight = 0;
++        for (int i = 0; i < videoHeights.length; i++) {
++            if (formats.videos()[i] != null) bestHeight = Math.max(bestHeight, videoHeights[i]);
++        }
++        final int minHeight = bestHeight >= MIN_HD_HEIGHT ? MIN_HD_HEIGHT
++                : bestHeight >= MIN_SD_HEIGHT ? MIN_SD_HEIGHT : 0;
++
++        Option recommended = null;
++        int recommendedHeight = 0;
++        for (int i = 0; i < videoHeights.length; i++) {
++            QuickDownloadFormats.VideoQuality quality = formats.videos()[i];
++            Option option = videoOptions.get(i);
++            Row row = option.row;
++            final int height = videoHeights[i];
++            if (quality == null || height < minHeight) {
++                row.view.setVisibility(View.GONE);
++                continue;
++            }
++            row.view.setVisibility(View.VISIBLE);
++            row.title.setText(qualityTitle(height, quality.fps()));
++            row.detail.setText(quality.codec().displayName + DETAIL_SEPARATOR + str(qualityHint(height)));
++            row.size.setText(formatSize(quality.bytes()));
++            // Full HD, else the best quality below it, else the lowest above it.
++            if (recommended == null || recommendedHeight > QuickDownloadFormats.MAX_H264_HEIGHT) {
++                recommended = option;
++                recommendedHeight = height;
++            }
++        }
++
++        // Read from the stream: the real bitrate, without the approximate sign.
++        if (formats.aacKbps() > 0) m4aRow.badge.setText(formats.aacKbps() + " kbps");
++        m4aRow.size.setText(formatSize(formats.aacBytes()));
++        // A constant bitrate MP3 of the stream's length.
++        mp3Row.size.setText(formatSize(formats.mp3Bytes()));
++
++        // A quality the video does not have, or the default quality, moves to the one closest to Full HD,
++        // or to the MP3 if the video has none of the qualities.
++        final boolean markedIsHidden = marked != null && marked.row.view.getVisibility() != View.VISIBLE;
++        if (markedIsHidden || (!markedByUser && videoOptions.contains(marked))) {
++            mark(recommended != null ? recommended : Objects.requireNonNull(mp3Option), false);
++        }
++    }
++
++    private int indexOfHeight(int height) {
++        for (int i = 0; i < videoHeights.length; i++) {
++            if (videoHeights[i] == height) return i;
++        }
++        throw new IllegalArgumentException("Unknown height: " + height);
++    }
++
++    @Nullable
++    private static String qualityBadge(int height) {
++        if (height >= 2160) return "4K";
++        if (height >= 1440) return "2K";
++        if (height >= 1080) return "FHD";
++        if (height >= 720) return "HD";
++        return null;
++    }
++
++    /** What a quality is good for, next to Full HD, the recommended one. */
++    private static String qualityHint(int height) {
++        if (height >= 2160) return "morphe_external_downloader_quick_best_quality";
++        if (height >= 1440) return "morphe_external_downloader_quick_better_quality";
++        if (height >= 1080) return "morphe_external_downloader_quick_recommended";
++        return "morphe_external_downloader_quick_smaller_file";
++    }
++
++    /** "1080p" with the frame rate after it, smaller and lighter: "1080p 60fps". */
++    private CharSequence qualityTitle(int height, int fps) {
++        if (fps <= 0) return height + "p";
++        String fpsText = " " + fps + "fps";
++        SpannableString text = new SpannableString(height + "p" + fpsText);
++        final int start = text.length() - fpsText.length();
++        text.setSpan(new RelativeSizeSpan(0.72f), start, text.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
++        text.setSpan(new ForegroundColorSpan(secondaryColor), start, text.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
++        return text;
++    }
++
++    private String formatSize(long bytes) {
++        return bytes > 0 ? Formatter.formatShortFileSize(context, bytes) : "";
++    }
++
++    private static GradientDrawable rounded(float radius, int color) {
++        GradientDrawable shape = new GradientDrawable();
++        shape.setCornerRadius(radius);
++        shape.setColor(color);
++        return shape;
++    }
++
++    private static int withAlpha(int color, int alpha) {
++        return (color & 0x00FFFFFF) | (alpha << 24);
++    }
++
++    /**
++     * The title of the video, with the channel and length under it.
++     * Until the streams are read only the menu's name is shown.
++     */
++    private Header createHeader() {
++        LinearLayout header = new LinearLayout(context);
++        header.setOrientation(LinearLayout.VERTICAL);
++        header.setPadding(Dim.dp16, Dim.dp4, Dim.dp16, Dim.dp4);
++
++        TextView title = new TextView(context);
++        title.setText(str("morphe_external_downloader_quick_menu_header"));
++        title.setTextColor(foregroundColor);
++        title.setTextSize(16);
++        title.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
++        title.setMaxLines(2);
++        title.setEllipsize(TextUtils.TruncateAt.END);
++        header.addView(title);
++
++        TextView subtitle = new TextView(context);
++        subtitle.setTextColor(secondaryColor);
++        subtitle.setTextSize(13);
++        subtitle.setSingleLine(true);
++        subtitle.setEllipsize(TextUtils.TruncateAt.END);
++        subtitle.setPadding(0, Dim.dp2, 0, 0);
++        subtitle.setVisibility(View.GONE);
++        header.addView(subtitle);
++
++        return new Header(header, title, subtitle);
++    }
++
++    private TextView createSectionHeader(String text) {
++        TextView header = new TextView(context);
++        header.setText(text);
++        header.setTextColor(secondaryColor);
++        header.setTextSize(13);
++        header.setPadding(Dim.dp16, Dim.dp8, Dim.dp16, Dim.dp2);
++        return header;
++    }
++
++    private void addDivider(LinearLayout layout) {
++        View divider = new View(context);
++        divider.setBackgroundColor(withAlpha(foregroundColor, FAINT_BACKGROUND_ALPHA));
++        LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(
++                LinearLayout.LayoutParams.MATCH_PARENT, Math.max(1, Dim.dp1));
++        dividerParams.setMargins(Dim.dp16, Dim.dp6, Dim.dp16, Dim.dp4);
++        layout.addView(divider, dividerParams);
++    }
++
++    private Drawable createRowBackground(boolean isMarked) {
++        return new RippleDrawable(
++                ColorStateList.valueOf(withAlpha(foregroundColor, RIPPLE_ALPHA)),
++                isMarked ? new ColorDrawable(withAlpha(foregroundColor, MARKED_BACKGROUND_ALPHA)) : null,
++                new ColorDrawable(0xFFFFFFFF));
++    }
++
++    /**
++     * A row like the quality list of YouTube's own download menu:
++     * quality and badge over the codec, the file size and the mark at the end.
++     */
++    private Row createRow(String title, @Nullable String badge, String detail, String size) {
++        LinearLayout row = new LinearLayout(context);
++        row.setOrientation(LinearLayout.HORIZONTAL);
++        row.setGravity(Gravity.CENTER_VERTICAL);
++        row.setMinimumHeight(Dim.dp48 + Dim.dp4);
++        row.setPadding(Dim.dp16, Dim.dp4, Dim.dp16, Dim.dp4);
++        row.setClickable(true);
++        row.setFocusable(true);
++        row.setBackground(createRowBackground(false));
++
++        LinearLayout texts = new LinearLayout(context);
++        texts.setOrientation(LinearLayout.VERTICAL);
++
++        LinearLayout titleLine = new LinearLayout(context);
++        titleLine.setOrientation(LinearLayout.HORIZONTAL);
++        titleLine.setGravity(Gravity.CENTER_VERTICAL);
++        TextView titleView = new TextView(context);
++        titleView.setText(title);
++        titleView.setTextColor(foregroundColor);
++        titleView.setTextSize(16);
++        titleView.setSingleLine(true);
++        titleLine.addView(titleView);
++        TextView badgeView = new TextView(context);
++        badgeView.setText(badge);
++        badgeView.setTextColor(foregroundColor);
++        badgeView.setTextSize(10);
++        badgeView.setTypeface(Typeface.DEFAULT_BOLD);
++        badgeView.setSingleLine(true);
++        badgeView.setBackground(rounded(Dim.dp4, withAlpha(foregroundColor, FAINT_BACKGROUND_ALPHA)));
++        badgeView.setPadding(Dim.dp6, Dim.dp1, Dim.dp6, Dim.dp1);
++        badgeView.setVisibility(badge == null ? View.GONE : View.VISIBLE);
++        LinearLayout.LayoutParams badgeParams = new LinearLayout.LayoutParams(
++                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
++        badgeParams.setMarginStart(Dim.dp8);
++        titleLine.addView(badgeView, badgeParams);
++        texts.addView(titleLine);
++
++        TextView detailView = new TextView(context);
++        detailView.setText(detail);
++        detailView.setTextColor(secondaryColor);
++        detailView.setTextSize(13);
++        detailView.setSingleLine(true);
++        detailView.setEllipsize(TextUtils.TruncateAt.END);
++        texts.addView(detailView);
++
++        row.addView(texts, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
++
++        TextView sizeView = new TextView(context);
++        sizeView.setText(size);
++        sizeView.setTextColor(foregroundColor);
++        sizeView.setTextSize(14);
++        sizeView.setSingleLine(true);
++        LinearLayout.LayoutParams sizeParams = new LinearLayout.LayoutParams(
++                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
++        sizeParams.setMarginStart(Dim.dp12);
++        row.addView(sizeView, sizeParams);
++
++        ImageView check = new ImageView(context);
++        check.setImageDrawable(new IconDrawable(ICON_CHECK, foregroundColor));
++        check.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
++        check.setVisibility(View.GONE);
++        LinearLayout.LayoutParams checkParams = new LinearLayout.LayoutParams(Dim.dp20, Dim.dp20);
++        checkParams.setMarginStart(Dim.dp12);
++        row.addView(check, checkParams);
++
++        return new Row(row, titleView, badgeView, detailView, sizeView, check);
++    }
++
++    /**
++     * All formats, which opens the downloader with all its options, and Download, which downloads the marked choice.
++     */
++    private View createButtons(int backgroundColor, Runnable onAllFormats, Runnable onDownload) {
++        LinearLayout buttons = new LinearLayout(context);
++        buttons.setOrientation(LinearLayout.HORIZONTAL);
++        buttons.setPadding(Dim.dp16, Dim.dp8, Dim.dp16, Dim.dp8);
++
++        GradientDrawable outline = rounded(Dim.dp24, 0);
++        outline.setStroke(Math.max(1, Dim.dp1), withAlpha(foregroundColor, OUTLINE_ALPHA));
++        View allFormats = createButton(str("morphe_external_downloader_quick_all_formats"), ICON_LIST,
++                foregroundColor, outline, onAllFormats);
++        LinearLayout.LayoutParams allFormatsParams = new LinearLayout.LayoutParams(0, Dim.dp48, 1);
++        allFormatsParams.setMarginEnd(Dim.dp8);
++        buttons.addView(allFormats, allFormatsParams);
++
++        // The colors of the menu, swapped.
++        View download = createButton(str("morphe_external_downloader_quick_download"), ICON_DOWNLOAD,
++                backgroundColor, rounded(Dim.dp24, foregroundColor), onDownload);
++        LinearLayout.LayoutParams downloadParams = new LinearLayout.LayoutParams(0, Dim.dp48, 1);
++        downloadParams.setMarginStart(Dim.dp8);
++        buttons.addView(download, downloadParams);
++
++        return buttons;
++    }
++
++    private View createButton(String text, float[][] icon, int textColor, GradientDrawable shape, Runnable onClick) {
++        LinearLayout button = new LinearLayout(context);
++        button.setOrientation(LinearLayout.HORIZONTAL);
++        button.setGravity(Gravity.CENTER);
++        button.setPadding(Dim.dp12, 0, Dim.dp12, 0);
++        button.setClickable(true);
++        button.setFocusable(true);
++        button.setBackground(new RippleDrawable(
++                ColorStateList.valueOf(withAlpha(textColor, RIPPLE_ALPHA)), shape, rounded(Dim.dp24, 0xFFFFFFFF)));
++        button.setOnClickListener(v -> onClick.run());
++
++        ImageView iconView = new ImageView(context);
++        iconView.setImageDrawable(new IconDrawable(icon, textColor));
++        iconView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
++        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(Dim.dp20, Dim.dp20);
++        iconParams.setMarginEnd(Dim.dp8);
++        button.addView(iconView, iconParams);
++
++        TextView label = new TextView(context);
++        label.setText(text);
++        label.setTextColor(textColor);
++        label.setTextSize(14);
++        label.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
++        label.setSingleLine(true);
++        label.setEllipsize(TextUtils.TruncateAt.END);
++        button.addView(label, new LinearLayout.LayoutParams(
++                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
++
++        return button;
++    }
++
++    /**
++     * An icon of filled polygons, drawn in the given color.
++     * The apps have no icons of their own for every menu, so they are drawn here.
++     */
++    private static final class IconDrawable extends Drawable {
++        private static final float VIEWPORT = 24;
++
++        private final float[][] polygons;
++        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
++        private final Path path = new Path();
++
++        /**
++         * @param polygons Points of each polygon, x and y in turn, in a 24 x 24 viewport.
++         */
++        IconDrawable(float[][] polygons, int color) {
++            this.polygons = polygons;
++            paint.setColor(color);
++            paint.setStyle(Paint.Style.FILL);
++        }
++
++        @Override
++        protected void onBoundsChange(@NonNull Rect bounds) {
++            final float scale = Math.min(bounds.width(), bounds.height()) / VIEWPORT;
++            path.reset();
++            for (float[] points : polygons) {
++                path.moveTo(bounds.left + points[0] * scale, bounds.top + points[1] * scale);
++                for (int i = 2; i < points.length; i += 2) {
++                    path.lineTo(bounds.left + points[i] * scale, bounds.top + points[i + 1] * scale);
++                }
++                path.close();
++            }
++        }
++
++        @Override
++        public void draw(@NonNull Canvas canvas) {
++            canvas.drawPath(path, paint);
++        }
++
++        @Override
++        public void setAlpha(int alpha) {
++            paint.setAlpha(alpha);
++        }
++
++        @Override
++        public void setColorFilter(@Nullable ColorFilter colorFilter) {
++            paint.setColorFilter(colorFilter);
++        }
++
++        @Override
++        public int getOpacity() {
++            return PixelFormat.TRANSLUCENT;
++        }
++    }
++}
+diff --git a/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/SharedYouTubeSettings.java b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/SharedYouTubeSettings.java
+index 21bbca3..fe461c4 100644
+--- a/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/SharedYouTubeSettings.java
++++ b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/SharedYouTubeSettings.java
+@@ -126,6 +126,7 @@ public class SharedYouTubeSettings extends BaseSettings {
+     // YouTube Music only.
+     public static final BooleanSetting EXTERNAL_DOWNLOADER_MENU = new BooleanSetting("morphe_external_downloader_menu", FALSE, DOWNLOAD_MODE.availability(DownloadMode.DEFAULT, DownloadMode.IN_APP));
+     public static final StringSetting EXTERNAL_DOWNLOADER_PACKAGE_NAME = new StringSetting("morphe_external_downloader_name", "com.deniscerri.ytdl" /* YTDLnis */, new ExternalDownloaderAvailability());
++    public static final BooleanSetting EXTERNAL_DOWNLOADER_QUICK_MENU = new BooleanSetting("morphe_external_downloader_quick_menu", FALSE, new ExternalDownloaderAvailability());
+ 
+     // Spoof app version
+     public static final BooleanSetting SPOOF_APP_VERSION = new BooleanSetting("morphe_spoof_app_version", FALSE, true, "morphe_spoof_app_version_user_dialog_message");
+diff --git a/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/preference/ExternalDownloaderPreference.java b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/preference/ExternalDownloaderPreference.java
+index 594e16f..b7a0e71 100644
+--- a/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/preference/ExternalDownloaderPreference.java
++++ b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/preference/ExternalDownloaderPreference.java
+@@ -216,6 +216,17 @@ public class ExternalDownloaderPreference extends CustomDialogListPreference {
+      */
+     public static boolean launchExternalDownloader(String videoId, @Nullable Context context, String url,
+                                                    @Nullable String quickDownloadType) {
++        return launchExternalDownloader(videoId, context, url, quickDownloadType, null);
++    }
++
++    /**
++     * @param quickExtras Extras of a quick download that replace the default quality,
++     *                    for example {@code VIDEO_QUALITY}, {@code VIDEO_CODEC} or {@code AUDIO_FORMAT}.
++     * @return If the downloader was opened.
++     */
++    public static boolean launchExternalDownloader(String videoId, @Nullable Context context, String url,
++                                                   @Nullable String quickDownloadType,
++                                                   @Nullable Bundle quickExtras) {
+         try {
+             Objects.requireNonNull(videoId);
+             if (context == null) {
+@@ -242,6 +253,9 @@ public class ExternalDownloaderPreference extends CustomDialogListPreference {
+                 intent.putExtra("BACKGROUND", true);
+                 intent.putExtra("VIDEO_QUALITY", QUICK_DOWNLOAD_VIDEO_HEIGHT);
+                 intent.putExtra("AUDIO_BITRATE", QUICK_DOWNLOAD_AUDIO_KBPS);
++                if (quickExtras != null) {
++                    intent.putExtras(quickExtras);
++                }
+             }
+             // Opening the downloader is not the user leaving the app.
+             // Without this flag a playing video enters picture-in-picture,
+diff --git a/extensions/shared-youtube/library/src/main/proto/app/morphe/extension/shared/innertube/player_response.proto b/extensions/shared-youtube/library/src/main/proto/app/morphe/extension/shared/innertube/player_response.proto
+index 9e119a3..b000a34 100644
+--- a/extensions/shared-youtube/library/src/main/proto/app/morphe/extension/shared/innertube/player_response.proto
++++ b/extensions/shared-youtube/library/src/main/proto/app/morphe/extension/shared/innertube/player_response.proto
+@@ -71,6 +71,8 @@ message Format {
+   optional string mimeType = 5;
+   optional string url = 2;
+   optional string signatureCipher = 48;
++  optional int32 fps = 25;
++  optional string qualityLabel = 26;
+ }
+ 
+ message PlayerConfig {
+diff --git a/extensions/youtube/src/main/java/app/morphe/extension/youtube/patches/InAppDownloadsPatch.java b/extensions/youtube/src/main/java/app/morphe/extension/youtube/patches/InAppDownloadsPatch.java
+index e21cccd..cb3b07a 100644
+--- a/extensions/youtube/src/main/java/app/morphe/extension/youtube/patches/InAppDownloadsPatch.java
++++ b/extensions/youtube/src/main/java/app/morphe/extension/youtube/patches/InAppDownloadsPatch.java
+@@ -92,7 +92,7 @@ public final class InAppDownloadsPatch {
+      * Clients that answer with stream urls, which the app can save.
+      * The visionOS streams need no JavaScript challenge, whose unsolved streams the server sends slowly.
+      */
+-    private static final List<ClientType> DOWNLOAD_CLIENTS = List.of(
++    public static final List<ClientType> DOWNLOAD_CLIENTS = List.of(
+             ClientType.VISIONOS_1_03,
+             ClientType.VISIONOS_1_02,
+             ClientType.ANDROID_VR_DASH,
+diff --git a/extensions/youtube/src/main/java/app/morphe/extension/youtube/settings/Settings.java b/extensions/youtube/src/main/java/app/morphe/extension/youtube/settings/Settings.java
+index cbfa952..0c8baf0 100644
+--- a/extensions/youtube/src/main/java/app/morphe/extension/youtube/settings/Settings.java
++++ b/extensions/youtube/src/main/java/app/morphe/extension/youtube/settings/Settings.java
+@@ -331,7 +331,6 @@ public class Settings extends SharedYouTubeSettings {
+     public static final BooleanSetting HIDE_HANDLE = new BooleanSetting("morphe_hide_handle", FALSE);
+     public static final EnumSetting<OpenFullscreenMode> OPEN_VIDEOS_FULLSCREEN = new EnumSetting<>("morphe_open_videos_fullscreen", OpenFullscreenMode.DISABLED);
+     public static final BooleanSetting SANITIZE_VIDEO_SUBTITLE = new BooleanSetting("morphe_sanitize_video_subtitle", FALSE);
+-    public static final BooleanSetting EXTERNAL_DOWNLOADER_QUICK_MENU = new BooleanSetting("morphe_external_downloader_quick_menu", FALSE, new ExternalDownloaderAvailability());
+     public static final BooleanSetting EXTERNAL_DOWNLOADER_MARK_WATCHED = new BooleanSetting("morphe_external_downloader_mark_watched", FALSE, new ExternalDownloaderAvailability());
+     public static final BooleanSetting SHORTS_DOWNLOAD_FLYOUT_BUTTON = new BooleanSetting("morphe_shorts_download_flyout_button", TRUE, DOWNLOAD_MODE.availability(DownloadMode.EXTERNAL, DownloadMode.IN_APP));
+     public static final StringSetting EXPORT_DOWNLOAD_FOLDER = new StringSetting("morphe_export_download_folder", "", DOWNLOAD_MODE.availability(DownloadMode.DEFAULT, DownloadMode.IN_APP));
+diff --git a/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/ExternalDownloadButton.java b/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/ExternalDownloadButton.java
+index 46566c7..6dbb680 100644
+--- a/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/ExternalDownloadButton.java
++++ b/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/ExternalDownloadButton.java
+@@ -18,6 +18,7 @@ import android.graphics.Typeface;
+ import android.graphics.drawable.ColorDrawable;
+ import android.graphics.drawable.Drawable;
+ import android.graphics.drawable.RippleDrawable;
++import android.os.Bundle;
+ import android.view.Gravity;
+ import android.view.View;
+ import android.widget.ImageView;
+@@ -29,10 +30,12 @@ import androidx.annotation.Nullable;
+ import app.morphe.extension.shared.Logger;
+ import app.morphe.extension.shared.ResourceUtils;
+ import app.morphe.extension.shared.Utils;
++import app.morphe.extension.shared.downloads.QuickDownloadMenu;
+ import app.morphe.extension.shared.settings.preference.ExternalDownloaderPreference;
+ import app.morphe.extension.shared.theme.ThemeUtils;
+ import app.morphe.extension.shared.ui.Dim;
+ import app.morphe.extension.shared.ui.SheetBottomDialog;
++import app.morphe.extension.youtube.patches.InAppDownloadsPatch;
+ import app.morphe.extension.youtube.patches.VideoInformation;
+ import app.morphe.extension.youtube.patches.utils.requests.MarkWatchedRequest;
+ import app.morphe.extension.youtube.settings.Settings;
+@@ -90,8 +93,16 @@ public class ExternalDownloadButton {
+      */
+     public static void launchDownloader(@Nullable Context context, String videoId,
+                                         @Nullable String quickDownloadType) {
++        launchDownloader(context, videoId, quickDownloadType, null);
++    }
++
++    /**
++     * @param quickExtras See {@link ExternalDownloaderPreference#launchExternalDownloader(String, Context, String, String, Bundle)}.
++     */
++    private static void launchDownloader(@Nullable Context context, String videoId,
++                                         @Nullable String quickDownloadType, @Nullable Bundle quickExtras) {
+         if (ExternalDownloaderPreference.launchExternalDownloader(
+-                videoId, context, "https://youtu.be/" + videoId, quickDownloadType)
++                videoId, context, "https://youtu.be/" + videoId, quickDownloadType, quickExtras)
+                 && Settings.EXTERNAL_DOWNLOADER_MARK_WATCHED.get()
+                 && (PlayerType.getCurrent().isNoneOrHidden() || !videoId.equals(VideoInformation.getVideoId()))) {
+             MarkWatchedRequest.markWatched(videoId);
+@@ -135,8 +146,11 @@ public class ExternalDownloadButton {
+      *                while the menu is open, and feed menus are not for the playing video.
+      */
+     public static void showQuickDownloadMenu(Context context, String videoId) {
++        if (ExternalDownloaderPreference.supportsQuickDownloadQuality()) {
++            showQualityMenu(context, videoId);
++            return;
++        }
+         try {
+-            final boolean showQuality = ExternalDownloaderPreference.supportsQuickDownloadQuality();
+             final int foregroundColor = ThemeUtils.getAppForegroundColor();
+ 
+             SheetBottomDialog.DraggableLinearLayout mainLayout =
+@@ -157,7 +171,7 @@ public class ExternalDownloadButton {
+             mainLayout.addView(createItem(context,
+                     "morphe_external_downloader_quick_video",
+                     str("morphe_external_downloader_quick_video"),
+-                    showQuality ? str("morphe_external_downloader_quick_video_quality") : null,
++                    null,
+                     () -> {
+                         dialog.dismiss();
+                         launchDownloader(context, videoId, "video");
+@@ -165,7 +179,7 @@ public class ExternalDownloadButton {
+             mainLayout.addView(createItem(context,
+                     "morphe_external_downloader_quick_audio",
+                     str("morphe_external_downloader_quick_audio"),
+-                    showQuality ? str("morphe_external_downloader_quick_audio_quality") : null,
++                    null,
+                     () -> {
+                         dialog.dismiss();
+                         launchDownloader(context, videoId, "audio");
+@@ -194,6 +208,25 @@ public class ExternalDownloadButton {
+         }
+     }
+ 
++    /**
++     * The quick download menu with qualities and file sizes,
++     * for downloaders that apply the requested quality (YTindir).
++     */
++    private static void showQualityMenu(Context context, String videoId) {
++        try {
++            SheetBottomDialog.SlideDialog dialog = QuickDownloadMenu.create(context, videoId,
++                    LegacyPlayerControlButton.getDialogBackgroundColor(),
++                    LegacyPlayerControlButton.fadeInDuration,
++                    InAppDownloadsPatch.DOWNLOAD_CLIENTS, InAppDownloadsPatch.DOWNLOAD_CLIENTS.get(0),
++                    QuickDownloadMenu.Choice.RECOMMENDED_VIDEO,
++                    (type, extras) -> launchDownloader(context, videoId, type, extras));
++            PipDismissHelper.dismissOnPip(dialog);
++            dialog.show();
++        } catch (Exception ex) {
++            Logger.printException(() -> "showQualityMenu failure", ex);
++        }
++    }
++
+     private static View createItem(Context context, String iconName, String title,
+                                    @Nullable String detail, Runnable onClick) {
+         final int foregroundColor = ThemeUtils.getAppForegroundColor();
+diff --git a/patches/src/main/kotlin/app/morphe/patches/music/interaction/downloads/DownloadsPatch.kt b/patches/src/main/kotlin/app/morphe/patches/music/interaction/downloads/DownloadsPatch.kt
+index 2b1bf88..714e6e1 100644
+--- a/patches/src/main/kotlin/app/morphe/patches/music/interaction/downloads/DownloadsPatch.kt
++++ b/patches/src/main/kotlin/app/morphe/patches/music/interaction/downloads/DownloadsPatch.kt
+@@ -64,7 +64,8 @@ private val downloadsResourcePatch = patch {
+                     TextPreference(
+                         "morphe_external_downloader_name",
+                         tag = "app.morphe.extension.shared.settings.preference.ExternalDownloaderPreference"
+-                    )
++                    ),
++                    SwitchPreference("morphe_external_downloader_quick_menu", summary = true)
+                 )
+             )
+         )
+diff --git a/patches/src/main/resources/addresources/values/music/strings.xml b/patches/src/main/resources/addresources/values/music/strings.xml
+index f21126b..4d07d93 100644
+--- a/patches/src/main/resources/addresources/values/music/strings.xml
++++ b/patches/src/main/resources/addresources/values/music/strings.xml
+@@ -141,6 +141,20 @@ Second \"item\" text"</string>
+     <!-- 'Download' should be translated using the same localized wording YouTube displays for the menu. -->
+     <string name="morphe_external_downloader_menu_title">Use external downloader for Download menu</string>
+     <string name="morphe_external_downloader_menu_summary">The Download option of menus opens your external downloader instead</string>
++    <string name="morphe_external_downloader_quick_menu_title">Quick download menu</string>
++    <string name="morphe_external_downloader_quick_menu_summary">Download shows the qualities and file sizes before downloading. Works with YTindir</string>
++    <string name="morphe_external_downloader_quick_menu_header">Quick download</string>
++    <string name="morphe_external_downloader_quick_best_quality">Best quality</string>
++    <string name="morphe_external_downloader_quick_better_quality">Better quality</string>
++    <string name="morphe_external_downloader_quick_recommended">Recommended</string>
++    <string name="morphe_external_downloader_quick_smaller_file">Smaller file</string>
++    <string name="morphe_external_downloader_quick_source_audio">Source audio</string>
++    <string name="morphe_external_downloader_quick_thumbnail">Thumbnail</string>
++    <string name="morphe_external_downloader_quick_thumbnail_summary">Original size</string>
++    <string name="morphe_external_downloader_quick_quality">Download quality</string>
++    <string name="morphe_external_downloader_quick_audio_only">Audio only</string>
++    <string name="morphe_external_downloader_quick_all_formats">All formats</string>
++    <string name="morphe_external_downloader_quick_download">Download</string>
+     <string name="morphe_music_downloads_screen_title">Downloads</string>
+     <string name="morphe_music_downloads_empty">"No downloads
+ Downloaded tracks appear here"</string>
 diff --git a/patches/src/main/resources/addresources/values/youtube/strings.xml b/patches/src/main/resources/addresources/values/youtube/strings.xml
-index b8a53c7f8..865f1f02f 100644
+index 8179a99..ce5b11b 100644
 --- a/patches/src/main/resources/addresources/values/youtube/strings.xml
 +++ b/patches/src/main/resources/addresources/values/youtube/strings.xml
-@@ -587,12 +587,17 @@ After a video with the Ask button is opened once, the feature works with all vid
+@@ -591,12 +591,21 @@ After a video with the Ask button is opened once, the feature works with all vid
      <string name="morphe_external_downloader_quick_menu_summary">Prompts to download in the background. Tap and hold to open the downloader. Works with YTDLnis and YTindir</string>
      <string name="morphe_external_downloader_mark_watched_title">Mark downloads as watched</string>
      <string name="morphe_external_downloader_mark_watched_summary">Videos downloaded with an external downloader are added to your YouTube watch history</string>
@@ -915,6 +1246,10 @@ index b8a53c7f8..865f1f02f 100644
 +    <string name="morphe_external_downloader_quick_source_audio">Source audio</string>
 +    <string name="morphe_external_downloader_quick_thumbnail">Thumbnail</string>
 +    <string name="morphe_external_downloader_quick_thumbnail_summary">Original size</string>
++    <string name="morphe_external_downloader_quick_quality">Download quality</string>
++    <string name="morphe_external_downloader_quick_audio_only">Audio only</string>
++    <string name="morphe_external_downloader_quick_all_formats">All formats</string>
++    <string name="morphe_external_downloader_quick_download">Download</string>
      <string name="morphe_shorts_download_flyout_button_title">Show download in Shorts menu</string>
      <string name="morphe_shorts_download_flyout_button_summary">Adds a download item to the menu of the Shorts player</string>
      <string name="morphe_shorts_download_flyout_title">Download</string>
