@@ -75,7 +75,7 @@
 ⓘ Настройки (Morphe) > Прочие > Подмена видеопотоков > Клиент по умолчанию » выберите visionOS ✓
 
 [b]• Решение 2:[/b] Исправление проблемы с воспроизведением путём генерации рабочего PoToken через сторонний генератор (через PotHelper)
-[b]✔ [color="#ff0044"]PotHelper[/color][/b] [size=1](by inotia00)[/size]
+[b]✔ [color="#ff0040"]PotHelper[/color][/b] [size=1](by inotia00)[/size]
 🔗 [url="https://github.com/MorpheApp/PotHelper/releases/download/v1.1.1/pot-helper-1.1.1.apk"][color="#808080"]PoToken_Helper-1.1.1.apk[/color][/url] (180 КБ)
 [size=1][i](если эта версия PotHelper уже установлена, скачивать её заново не нужно)[/i][/size]
 
