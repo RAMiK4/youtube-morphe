@@ -51,6 +51,8 @@ env:
   APP_TITLE: YT Morphe
   APP_NAME: YouTube Morphe
   STRIPLIBS: arm64-v8a
+  # Time zone of the phone the test builds are unzipped on
+  LOCAL_TZ: Europe/Istanbul
   FORUM_URL: ""   # 4PDA topic URL
   # APKs and update info on Cloudflare R2, served by cloudflare/worker.js (required to publish)
   DL_BASE_URL: ${{ vars.DL_BASE_URL }}
@@ -371,6 +373,8 @@ jobs:
             local id=$1 label=$2 safe=$3 pkg=$4 clone=$5 theme=$6
             local opts="$RUNNER_TEMP/options-$id.json"
             local base="YT_Morphe-v${YT_VERSION}-p${PATCHES_VER}"
+            # Test builds keep their build number, so that two of them are told apart on the phone
+            [ "${{ inputs.publish }}" = "true" ] || base="${base}-b${BUILD}"
             # The asset label is the file name, so the release page shows the name of the downloaded file
             local out="$RUNNER_TEMP/out/${base}_${safe}.apk"
             echo "${base}_${label}.apk" > "$out.label"
@@ -491,6 +495,15 @@ jobs:
             app.morphe.android.youtube false \
             '{}'
           fi
+
+      - name: Set local time of test build
+        if: ${{ !inputs.publish }}
+        run: |
+          # The artifact zip stores the time without a time zone, as the UTC time of the runner, and the
+          # phone reads it as local time. The APKs get the local time instead, so they show when they were made.
+          NOW=$(TZ="$LOCAL_TZ" date '+%Y-%m-%d %H:%M:%S')
+          touch -d "$NOW" "$RUNNER_TEMP"/out/*.apk
+          ls -l "$RUNNER_TEMP"/out/
 
       - name: Upload test build
         if: ${{ !inputs.publish }}
