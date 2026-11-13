@@ -16,6 +16,11 @@ on:
         required: false
         default: ""
         type: string
+      official_only:
+        description: "Test only: official patches only, without the mod's add-ons, extras and YaVoT"
+        required: false
+        default: false
+        type: boolean
       publish:
         description: "Publish the release (unchecked: test build in Artifacts only)"
         required: false
@@ -71,7 +76,14 @@ jobs:
           CHANNEL: ${{ inputs.patches }}
           SOURCE: ${{ inputs.patches_source }}
           PUBLISH: ${{ inputs.publish }}
+          OFFICIAL_ONLY: ${{ inputs.official_only }}
         run: |
+          # Features and fixes for Morphe are tested first with the official patches only,
+          # and with the add-ons of the mod only at the end
+          if [ "$OFFICIAL_ONLY" = "true" ]; then
+            [ "$PUBLISH" != "true" ] || { echo "::error::Official patches only is for test builds only. Uncheck 'Publish the release'."; exit 1; }
+            echo "Official patches only: add-ons, extras and YaVoT are left out"
+          fi
           if [ -n "$SOURCE" ]; then
             # A branch of a fork is only built for testing, never published
             [ "$PUBLISH" != "true" ] || { echo "::error::A patches branch is for test builds only. Uncheck 'Publish the release'."; exit 1; }
@@ -128,6 +140,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          if [ "${{ inputs.official_only }}" = "true" ]; then
+            ./gradlew :patches:buildAndroid --no-daemon
+            cp patches/build/libs/patches-*.mpp "$RUNNER_TEMP/patches.mpp"
+            exit 0
+          fi
           # Changes of the mod to official Morphe files (addons/morphe/*.patch, such as features
           # sent to Morphe that are not merged yet), skipped once Morphe includes them
           for f in "$GITHUB_WORKSPACE"/addons/morphe/*.patch; do
@@ -187,6 +204,7 @@ jobs:
           cp patches/build/libs/patches-*.mpp "$RUNNER_TEMP/patches.mpp"
 
       - name: Build YaVoT add-on
+        if: ${{ !inputs.official_only }}
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -266,9 +284,12 @@ jobs:
       - name: Prepare base options
         run: |
           CLI="$RUNNER_TEMP/morphe-cli.jar"
-          java -jar "$CLI" options-create -p "$RUNNER_TEMP/patches.mpp" -p "$RUNNER_TEMP/yavot.mpp" \
+          BUNDLES=(-p "$RUNNER_TEMP/patches.mpp")
+          [ "${{ inputs.official_only }}" = "true" ] || BUNDLES+=(-p "$RUNNER_TEMP/yavot.mpp")
+          COUNT=$(( ${#BUNDLES[@]} / 2 ))
+          java -jar "$CLI" options-create "${BUNDLES[@]}" \
             -o "$RUNNER_TEMP/base.json" -f com.google.android.youtube
-          [ "$(jq length "$RUNNER_TEMP/base.json")" -eq 2 ] || { echo "::error::Expected 2 patch bundles in the options file"; exit 1; }
+          [ "$(jq length "$RUNNER_TEMP/base.json")" -eq "$COUNT" ] || { echo "::error::Expected $COUNT patch bundles in the options file"; exit 1; }
           # All YouTube patches (without universal patches)
           java -jar "$CLI" list-patches --patches "$RUNNER_TEMP/patches.mpp" \
             --filter-package-name com.google.android.youtube \
@@ -363,7 +384,8 @@ jobs:
                --arg build "$CHECK_BUILD" \
                --arg verinfo "v$YT_VERSION p$PATCHES_VER · Build $BUILD" \
                --arg defaults "$(jq -c . settings/defaults.json)" \
-               --arg name "$APP_NAME" --arg icon "$icon" --arg header "$header" '
+               --arg name "$APP_NAME" --arg icon "$icon" --arg header "$header" \
+               --argjson official "${{ inputs.official_only }}" '
               def opt($p; $k; $v): if .[0].patches[$p] then .[0].patches[$p].options[$k] = $v
                                    else error("Patch not found: " + $p) end;
               .[0].patches |= with_entries(
@@ -374,11 +396,14 @@ jobs:
               | if $clone then opt("Clone app"; "packageName"; $pkg) else . end
               | opt("Theme"; "darkThemeColor"; "in-app")
               | opt("Theme"; "lightThemeColor"; "in-app")
-              | reduce ($theme | to_entries[]) as $e (.; opt("Theme defaults"; $e.key; $e.value))
-              | opt("Update checker"; "updateUrl"; $updurl)
-              | opt("Update checker"; "buildNumber"; $build)
-              | opt("Update checker"; "versionInfo"; $verinfo)
-              | opt("Default settings"; "settings"; $defaults)
+              # Patches of the mod (extras/), which the official patches do not have
+              | if $official then . else
+                  reduce ($theme | to_entries[]) as $e (.; opt("Theme defaults"; $e.key; $e.value))
+                  | opt("Update checker"; "updateUrl"; $updurl)
+                  | opt("Update checker"; "buildNumber"; $build)
+                  | opt("Update checker"; "versionInfo"; $verinfo)
+                  | opt("Default settings"; "settings"; $defaults)
+                end
               # Add-ons (YaVoT): all patches enabled
               | .[range(1; length)].patches |= with_entries(.value.enabled = true)
               | opt("Custom branding"; "customName"; $name)
@@ -387,9 +412,10 @@ jobs:
             ' "$RUNNER_TEMP/base.json" > "$opts"
             jq -r '.[].patches | to_entries[] | select(.value.enabled) | "  ✓ \(.key)"' "$opts"
 
+            local bundles=(-p "$RUNNER_TEMP/patches.mpp")
+            [ "${{ inputs.official_only }}" = "true" ] || bundles+=(-p "$RUNNER_TEMP/yavot.mpp")
             java -jar "$RUNNER_TEMP/morphe-cli.jar" patch \
-              -p "$RUNNER_TEMP/patches.mpp" \
-              -p "$RUNNER_TEMP/yavot.mpp" \
+              "${bundles[@]}" \
               --options-file "$opts" \
               --keystore "$RUNNER_TEMP/morphe.keystore" \
               --keystore-password "${KEYSTORE_PASSWORD}" \
