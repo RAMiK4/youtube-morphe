@@ -122,7 +122,7 @@ jobs:
         run: |
           # YouTube part of the Morphe changelog: the new features of a stable version's own section,
           # or of all dev versions since the last one released here. Fixes are not listed: the notes
-          # end with "Bug fixes and other improvements". Changes keep the order of the Morphe changelog.
+          # end with a "Bug fixes and other improvements" heading. Changes keep the order of the Morphe changelog.
           # Patches versions that already have a release: tags v<yt>-p<patches>-b<build>
           gh release list --repo "$GITHUB_REPOSITORY" --limit 200 --json tagName -q '.[].tagName' \
             | sed -n 's/^v[^-]*-p\(.*\)-b[0-9]*$/\1/p' > "$RUNNER_TEMP/released.txt"
