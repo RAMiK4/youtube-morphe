@@ -23,7 +23,7 @@ The changelog is generated from the Morphe changelog (YouTube only), newest firs
 
 - An empty line after each `[spoiler=...]` title
 - No "test version" note next to dev patches versions, users could misread it
-- What's new is a plain list, without a line for the YouTube and patches versions (such as "YouTube 21.44.528, Morphe Patches 2.1.0 (стабильная версия)"). A stable version lists its full changelog, the best YouTube features first; a dev version lists the new features of the last 2 dev versions
+- What's new is a plain list, without a line for the YouTube and patches versions (such as "YouTube 21.44.528, Morphe Patches 2.1.0 (стабильная версия)"). A stable version lists its full changelog, the best YouTube features first; a dev version lists the new features of all dev versions since the last release
 - Link titles in `[color="#808080"]`, followed by the file size
 - Section order: header, What's new, Features, Download (Amoled, then Original), Mod info, Help (MicroG RE, playback fixes)
 
