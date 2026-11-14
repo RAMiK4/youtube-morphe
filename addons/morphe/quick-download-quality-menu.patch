@@ -1,11 +1,11 @@
 diff --git a/extensions/music/src/main/java/app/morphe/extension/music/patches/DownloadsPatch.java b/extensions/music/src/main/java/app/morphe/extension/music/patches/DownloadsPatch.java
-index 94ea421..575c090 100644
+index 49474203..3a08b5d0 100644
 --- a/extensions/music/src/main/java/app/morphe/extension/music/patches/DownloadsPatch.java
 +++ b/extensions/music/src/main/java/app/morphe/extension/music/patches/DownloadsPatch.java
-@@ -27,11 +27,13 @@ import app.morphe.extension.music.patches.components.SongMenuFilter;
- import app.morphe.extension.music.patches.downloads.DownloadedMark;
- import app.morphe.extension.music.patches.downloads.LocalDownloadManager;
- import app.morphe.extension.music.patches.downloads.PlaylistDownloader;
+@@ -25,11 +25,13 @@ import java.util.regex.Pattern;
+ 
+ import app.morphe.extension.music.patches.components.PlaylistPageFilter;
+ import app.morphe.extension.music.patches.components.SongMenuFilter;
 +import app.morphe.extension.music.patches.spoof.SpoofVideoStreamsPatch;
  import app.morphe.extension.music.settings.Settings;
  import app.morphe.extension.music.shared.VideoInformation;
@@ -13,25 +13,37 @@ index 94ea421..575c090 100644
  import app.morphe.extension.shared.ResourceUtils;
  import app.morphe.extension.shared.Utils;
 +import app.morphe.extension.shared.downloads.QuickDownloadMenu;
- import app.morphe.extension.shared.patches.DownloadMode;
- import app.morphe.extension.shared.patches.components.ByteArrayFilterGroup;
- import app.morphe.extension.shared.patches.components.ContextInterface;
-@@ -55,6 +57,9 @@ public final class DownloadsPatch {
+ import app.morphe.extension.shared.innertube.Offline.OfflineCommand;
+ import app.morphe.extension.shared.innertube.Offline.OfflinePlaylistAction;
+ import app.morphe.extension.shared.innertube.Offline.OfflinePlaylistEndpoint;
+@@ -55,6 +57,9 @@ public final class DownloadsPatch extends BaseInAppDownloadsPatch {
  
      private static volatile String downloadButtonLabel = "";
  
 +    private static final int QUICK_DOWNLOAD_MENU_DARK_COLOR = 0xFF212121;
 +    private static final int QUICK_DOWNLOAD_MENU_ANIMATION_DURATION = 200;
 +
-     /** Command field of the 'ypc/get_offline_upsell' endpoint. */
-     private static final int OFFLINE_UPSELL_ENDPOINT = 133724106;
      /**
-@@ -205,8 +210,35 @@ public final class DownloadsPatch {
-             return;
+      * Fields of the encoded parameters of the offline upsell. The parameters of a song hold its video ID,
+      * and the parameters of an album or a playlist hold its id in a nested message.
+@@ -319,8 +324,7 @@ public final class DownloadsPatch extends BaseInAppDownloadsPatch {
+     @Nullable
+     private static byte[] videoDownload(String videoId, boolean externalDownloader) {
+         if (externalDownloader) {
+-            Utils.runOnMainThreadNowOrLater(() -> ExternalDownloaderPreference.launchExternalDownloader(
+-                    videoId, Utils.getActivity(), "https://music.youtube.com/watch?v=" + videoId));
++            Utils.runOnMainThreadNowOrLater(() -> launchVideoDownloader(videoId));
+             return EMPTY_COMMAND;
          }
+         if (isInAppDownloadMode()) {
+@@ -329,6 +333,41 @@ public final class DownloadsPatch extends BaseInAppDownloadsPatch {
+         return null;
+     }
  
--        ExternalDownloaderPreference.launchExternalDownloader(
--                videoId, Utils.getActivity(), "https://music.youtube.com/watch?v=" + videoId);
++    /**
++     * Opens the external downloader for a song, or the quick download menu if it is on.
++     */
++    private static void launchVideoDownloader(String videoId) {
 +        Activity activity = Utils.getActivity();
 +        String url = "https://music.youtube.com/watch?v=" + videoId;
 +        if (activity != null && Settings.EXTERNAL_DOWNLOADER_QUICK_MENU.get()
@@ -61,12 +73,14 @@ index 94ea421..575c090 100644
 +        } catch (Exception ex) {
 +            Logger.printException(() -> "showQuickDownloadMenu failure", ex);
 +        }
-     }
- 
-     private static void openLocalDownloads() {
++    }
++
+     /**
+      * Saves a playlist or an album in-app, or hands its page to the external downloader,
+      * as the download mode says.
 diff --git a/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/downloads/QuickDownloadFormats.java b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/downloads/QuickDownloadFormats.java
 new file mode 100644
-index 0000000..0efc4e8
+index 00000000..0efc4e85
 --- /dev/null
 +++ b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/downloads/QuickDownloadFormats.java
 @@ -0,0 +1,275 @@
@@ -347,7 +361,7 @@ index 0000000..0efc4e8
 +}
 diff --git a/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/downloads/QuickDownloadMenu.java b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/downloads/QuickDownloadMenu.java
 new file mode 100644
-index 0000000..81f4f11
+index 00000000..81f4f118
 --- /dev/null
 +++ b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/downloads/QuickDownloadMenu.java
 @@ -0,0 +1,657 @@
@@ -1008,23 +1022,36 @@ index 0000000..81f4f11
 +        }
 +    }
 +}
+diff --git a/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/patches/BaseInAppDownloadsPatch.java b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/patches/BaseInAppDownloadsPatch.java
+index 7d6c0b27..7da63d09 100644
+--- a/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/patches/BaseInAppDownloadsPatch.java
++++ b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/patches/BaseInAppDownloadsPatch.java
+@@ -70,7 +70,7 @@ public class BaseInAppDownloadsPatch {
+      * Clients that answer with stream urls, which the app can save.
+      * The visionOS streams need no JavaScript challenge, whose unsolved streams the server sends slowly.
+      */
+-    protected static final List<ClientType> DOWNLOAD_CLIENTS = List.of(
++    public static final List<ClientType> DOWNLOAD_CLIENTS = List.of(
+             ClientType.VISIONOS_1_03,
+             ClientType.VISIONOS_1_02,
+             ClientType.ANDROID_VR_DASH,
 diff --git a/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/SharedYouTubeSettings.java b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/SharedYouTubeSettings.java
-index 21bbca3..fe461c4 100644
+index a947f2b0..5622742b 100644
 --- a/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/SharedYouTubeSettings.java
 +++ b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/SharedYouTubeSettings.java
-@@ -126,6 +126,7 @@ public class SharedYouTubeSettings extends BaseSettings {
+@@ -134,6 +134,7 @@ public class SharedYouTubeSettings extends BaseSettings {
      // YouTube Music only.
      public static final BooleanSetting EXTERNAL_DOWNLOADER_MENU = new BooleanSetting("morphe_external_downloader_menu", FALSE, DOWNLOAD_MODE.availability(DownloadMode.DEFAULT, DownloadMode.IN_APP));
      public static final StringSetting EXTERNAL_DOWNLOADER_PACKAGE_NAME = new StringSetting("morphe_external_downloader_name", "com.deniscerri.ytdl" /* YTDLnis */, new ExternalDownloaderAvailability());
 +    public static final BooleanSetting EXTERNAL_DOWNLOADER_QUICK_MENU = new BooleanSetting("morphe_external_downloader_quick_menu", FALSE, new ExternalDownloaderAvailability());
- 
-     // Spoof app version
-     public static final BooleanSetting SPOOF_APP_VERSION = new BooleanSetting("morphe_spoof_app_version", FALSE, true, "morphe_spoof_app_version_user_dialog_message");
+     // YouTube only saves videos in the app with these download modes.
+     // YouTube Music also saves songs with smart downloads, with any download mode.
+     public static final StringSetting EXPORT_DOWNLOAD_FOLDER = new StringSetting("morphe_export_download_folder", "",
 diff --git a/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/preference/ExternalDownloaderPreference.java b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/preference/ExternalDownloaderPreference.java
-index 594e16f..71d7458 100644
+index dcad6d3c..d67af7b8 100644
 --- a/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/preference/ExternalDownloaderPreference.java
 +++ b/extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/preference/ExternalDownloaderPreference.java
-@@ -216,6 +216,18 @@ public class ExternalDownloaderPreference extends CustomDialogListPreference {
+@@ -217,6 +217,18 @@ public class ExternalDownloaderPreference extends CustomDialogListPreference {
       */
      public static boolean launchExternalDownloader(String videoId, @Nullable Context context, String url,
                                                     @Nullable String quickDownloadType) {
@@ -1054,7 +1081,7 @@ index 594e16f..71d7458 100644
              // Without this flag a playing video enters picture-in-picture,
              // and the downloader's window opens over the home screen instead of over the video.
 diff --git a/extensions/shared-youtube/library/src/main/proto/app/morphe/extension/shared/innertube/player_response.proto b/extensions/shared-youtube/library/src/main/proto/app/morphe/extension/shared/innertube/player_response.proto
-index 9e119a3..b000a34 100644
+index d6257ee1..d605a305 100644
 --- a/extensions/shared-youtube/library/src/main/proto/app/morphe/extension/shared/innertube/player_response.proto
 +++ b/extensions/shared-youtube/library/src/main/proto/app/morphe/extension/shared/innertube/player_response.proto
 @@ -71,6 +71,8 @@ message Format {
@@ -1066,33 +1093,20 @@ index 9e119a3..b000a34 100644
  }
  
  message PlayerConfig {
-diff --git a/extensions/youtube/src/main/java/app/morphe/extension/youtube/patches/InAppDownloadsPatch.java b/extensions/youtube/src/main/java/app/morphe/extension/youtube/patches/InAppDownloadsPatch.java
-index e21cccd..cb3b07a 100644
---- a/extensions/youtube/src/main/java/app/morphe/extension/youtube/patches/InAppDownloadsPatch.java
-+++ b/extensions/youtube/src/main/java/app/morphe/extension/youtube/patches/InAppDownloadsPatch.java
-@@ -92,7 +92,7 @@ public final class InAppDownloadsPatch {
-      * Clients that answer with stream urls, which the app can save.
-      * The visionOS streams need no JavaScript challenge, whose unsolved streams the server sends slowly.
-      */
--    private static final List<ClientType> DOWNLOAD_CLIENTS = List.of(
-+    public static final List<ClientType> DOWNLOAD_CLIENTS = List.of(
-             ClientType.VISIONOS_1_03,
-             ClientType.VISIONOS_1_02,
-             ClientType.ANDROID_VR_DASH,
 diff --git a/extensions/youtube/src/main/java/app/morphe/extension/youtube/settings/Settings.java b/extensions/youtube/src/main/java/app/morphe/extension/youtube/settings/Settings.java
-index cbfa952..0c8baf0 100644
+index 89fa4b53..2e68ed14 100644
 --- a/extensions/youtube/src/main/java/app/morphe/extension/youtube/settings/Settings.java
 +++ b/extensions/youtube/src/main/java/app/morphe/extension/youtube/settings/Settings.java
-@@ -331,7 +331,6 @@ public class Settings extends SharedYouTubeSettings {
+@@ -336,7 +336,6 @@ public class Settings extends SharedYouTubeSettings {
      public static final BooleanSetting HIDE_HANDLE = new BooleanSetting("morphe_hide_handle", FALSE);
      public static final EnumSetting<OpenFullscreenMode> OPEN_VIDEOS_FULLSCREEN = new EnumSetting<>("morphe_open_videos_fullscreen", OpenFullscreenMode.DISABLED);
      public static final BooleanSetting SANITIZE_VIDEO_SUBTITLE = new BooleanSetting("morphe_sanitize_video_subtitle", FALSE);
 -    public static final BooleanSetting EXTERNAL_DOWNLOADER_QUICK_MENU = new BooleanSetting("morphe_external_downloader_quick_menu", FALSE, new ExternalDownloaderAvailability());
      public static final BooleanSetting EXTERNAL_DOWNLOADER_MARK_WATCHED = new BooleanSetting("morphe_external_downloader_mark_watched", FALSE, new ExternalDownloaderAvailability());
      public static final BooleanSetting SHORTS_DOWNLOAD_FLYOUT_BUTTON = new BooleanSetting("morphe_shorts_download_flyout_button", TRUE, DOWNLOAD_MODE.availability(DownloadMode.EXTERNAL, DownloadMode.IN_APP));
-     public static final StringSetting EXPORT_DOWNLOAD_FOLDER = new StringSetting("morphe_export_download_folder", "", DOWNLOAD_MODE.availability(DownloadMode.DEFAULT, DownloadMode.IN_APP));
+ 
 diff --git a/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/ExternalDownloadButton.java b/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/ExternalDownloadButton.java
-index 46566c7..6dbb680 100644
+index 46566c78..6dbb6801 100644
 --- a/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/ExternalDownloadButton.java
 +++ b/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/ExternalDownloadButton.java
 @@ -18,6 +18,7 @@ import android.graphics.Typeface;
@@ -1192,10 +1206,10 @@ index 46566c7..6dbb680 100644
                                     @Nullable String detail, Runnable onClick) {
          final int foregroundColor = ThemeUtils.getAppForegroundColor();
 diff --git a/patches/src/main/kotlin/app/morphe/patches/music/interaction/downloads/DownloadsPatch.kt b/patches/src/main/kotlin/app/morphe/patches/music/interaction/downloads/DownloadsPatch.kt
-index 2b1bf88..714e6e1 100644
+index fe473b75..62dc4caf 100644
 --- a/patches/src/main/kotlin/app/morphe/patches/music/interaction/downloads/DownloadsPatch.kt
 +++ b/patches/src/main/kotlin/app/morphe/patches/music/interaction/downloads/DownloadsPatch.kt
-@@ -64,7 +64,8 @@ private val downloadsResourcePatch = patch {
+@@ -87,7 +87,8 @@ private val downloadsResourcePatch = patch {
                      TextPreference(
                          "morphe_external_downloader_name",
                          tag = "app.morphe.extension.shared.settings.preference.ExternalDownloaderPreference"
@@ -1206,10 +1220,10 @@ index 2b1bf88..714e6e1 100644
              )
          )
 diff --git a/patches/src/main/resources/addresources/values/music/strings.xml b/patches/src/main/resources/addresources/values/music/strings.xml
-index f21126b..59bdd1e 100644
+index 464e0977..af017792 100644
 --- a/patches/src/main/resources/addresources/values/music/strings.xml
 +++ b/patches/src/main/resources/addresources/values/music/strings.xml
-@@ -141,6 +141,20 @@ Second \"item\" text"</string>
+@@ -143,6 +143,20 @@ Second \"item\" text"</string>
      <!-- 'Download' should be translated using the same localized wording YouTube displays for the menu. -->
      <string name="morphe_external_downloader_menu_title">Use external downloader for Download menu</string>
      <string name="morphe_external_downloader_menu_summary">The Download option of menus opens your external downloader instead</string>
@@ -1227,14 +1241,14 @@ index f21126b..59bdd1e 100644
 +    <string name="morphe_external_downloader_quick_quality">Download quality</string>
 +    <string name="morphe_external_downloader_quick_audio_only">Audio only</string>
 +    <string name="morphe_external_downloader_quick_download">Download</string>
-     <string name="morphe_music_downloads_screen_title">Downloads</string>
-     <string name="morphe_music_downloads_empty">"No downloads
- Downloaded tracks appear here"</string>
+     <string name="morphe_export_download_folder_title">Export downloads</string>
+     <string name="morphe_export_download_folder_summary">"Export in-app saved songs and videos to your device storage using the in-app downloads flyout menu. Tap to change the export
+ 
 diff --git a/patches/src/main/resources/addresources/values/youtube/strings.xml b/patches/src/main/resources/addresources/values/youtube/strings.xml
-index 8179a99..3197307 100644
+index 49f72054..7150b10e 100644
 --- a/patches/src/main/resources/addresources/values/youtube/strings.xml
 +++ b/patches/src/main/resources/addresources/values/youtube/strings.xml
-@@ -591,12 +591,20 @@ After a video with the Ask button is opened once, the feature works with all vid
+@@ -594,12 +594,20 @@ After a video with the Ask button is opened once, the feature works with all vid
      <string name="morphe_external_downloader_quick_menu_summary">Prompts to download in the background. Tap and hold to open the downloader. Works with YTDLnis and YTindir</string>
      <string name="morphe_external_downloader_mark_watched_title">Mark downloads as watched</string>
      <string name="morphe_external_downloader_mark_watched_summary">Videos downloaded with an external downloader are added to your YouTube watch history</string>

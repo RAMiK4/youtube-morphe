@@ -1,5 +1,5 @@
 diff --git a/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/LegacyPlayerControlButton.java b/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/LegacyPlayerControlButton.java
-index fdaa4de..59def7c 100644
+index e76cdfab..4eefd32f 100644
 --- a/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/LegacyPlayerControlButton.java
 +++ b/extensions/youtube/src/main/java/app/morphe/extension/youtube/videoplayer/LegacyPlayerControlButton.java
 @@ -27,6 +27,8 @@ import app.morphe.extension.shared.Logger;
@@ -9,9 +9,9 @@ index fdaa4de..59def7c 100644
 +import app.morphe.extension.shared.theme.ThemeColorPatch;
 +import app.morphe.extension.shared.theme.ThemeUtils;
  
+ @SuppressWarnings("unused")
  public class LegacyPlayerControlButton {
- 
-@@ -57,10 +59,19 @@ public class LegacyPlayerControlButton {
+@@ -58,10 +60,19 @@ public class LegacyPlayerControlButton {
          return totalUpperButtonCount;
      }
  
