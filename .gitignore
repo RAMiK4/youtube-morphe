@@ -3,3 +3,4 @@
 *.jks
 *.bks
 *.mpp
+__pycache__/
