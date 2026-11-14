@@ -1,4 +1,4 @@
-<!-- Fixes of the mod, listed in the release notes and the in-app changelog after the Morphe bug fixes of the same patches version. -->
+<!-- Fixes of the mod. No longer listed in the release notes (they end with "Bug fixes and other improvements"); kept as a record. -->
 
 ## 2.2.0
 
