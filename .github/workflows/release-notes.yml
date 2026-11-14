@@ -1,0 +1,124 @@
+name: Update release notes
+
+# Generates the changelog of a published release again (scripts/changelog.py and notes/), without a new build:
+# the release notes keep their files table, the in-app changelog of the update info (R2 and updates/*.json)
+# is replaced if the update info is still the one of that release.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (empty: latest release)"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  PATCHES_REPO: MorpheApp/morphe-patches
+  DL_BASE_URL: ${{ vars.DL_BASE_URL }}
+  R2_BUCKET: ${{ vars.R2_BUCKET }}
+  R2_PREFIX: ""
+
+jobs:
+  notes:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Resolve release
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          [ -n "$TAG" ] || TAG=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName -q .tagName)
+          PATCHES_VER=$(sed -n 's/^v[^-]*-p\(.*\)-b[0-9]*$/\1/p' <<< "$TAG")
+          [ -n "$PATCHES_VER" ] || { echo "::error::Not a release tag of the mod: $TAG"; exit 1; }
+          echo "Release $TAG, patches $PATCHES_VER"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          echo "PATCHES_VER=$PATCHES_VER" >> "$GITHUB_ENV"
+
+      - name: Checkout patches
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ env.PATCHES_REPO }}
+          ref: v${{ env.PATCHES_VER }}
+          path: patches-src
+          sparse-checkout: CHANGELOG.md
+          sparse-checkout-cone-mode: false
+
+      - name: Generate changelog
+        run: |
+          # Patches versions released before this release (as in the release workflow, where this
+          # release did not exist yet)
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 200 --json tagName -q '.[].tagName' \
+            | grep -vxF "$TAG" \
+            | sed -n 's/^v[^-]*-p\(.*\)-b[0-9]*$/\1/p' > "$RUNNER_TEMP/released.txt" || true
+          python3 -I scripts/changelog.py patches-src/CHANGELOG.md "$PATCHES_VER" \
+            "$RUNNER_TEMP/changes.md" "$RUNNER_TEMP/changes.txt" \
+            --mod-features notes/mod-features.md \
+            --extra-features notes/extra-features.md --released "$RUNNER_TEMP/released.txt"
+          cat "$RUNNER_TEMP/changes.txt"
+
+      - name: Update release notes
+        run: |
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body -q .body | tr -d '\r' > "$RUNNER_TEMP/body.md"
+          # The files table of the release stays as it is
+          grep -q '^## 📦 Files' "$RUNNER_TEMP/body.md" || { echo "::error::No files table in the release notes of $TAG"; exit 1; }
+          {
+            cat "$RUNNER_TEMP/changes.md"
+            echo
+            sed -n '/^## 📦 Files/,$p' "$RUNNER_TEMP/body.md"
+          } > "$RUNNER_TEMP/notes.md"
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file "$RUNNER_TEMP/notes.md"
+
+      - name: Update in-app changelog
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          # Same fields as the release workflow: English from Morphe, other languages kept
+          set_changelog() {
+            jq --rawfile text "$RUNNER_TEMP/changes.txt" \
+              '.changelog = ($text | rtrimstr("\n")) | .changelogs.en = ($text | rtrimstr("\n"))' "$1" > "$1.new"
+            mv "$1.new" "$1"
+          }
+          for id in hiby morphe; do
+            if [ -n "$DL_BASE_URL" ] && [ -n "$R2_ACCOUNT_ID" ]; then
+              s3() { aws s3 --endpoint-url "https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com" "$@"; }
+              f="$RUNNER_TEMP/$id.json"
+              s3 cp "s3://$R2_BUCKET/${R2_PREFIX}updates/$id.json" "$f" --only-show-errors
+              if [ "$(jq -r .tag "$f")" = "$TAG" ]; then
+                set_changelog "$f"
+                s3 cp "$f" "s3://$R2_BUCKET/${R2_PREFIX}updates/$id.json" \
+                  --content-type "application/json; charset=utf-8" --cache-control no-cache --only-show-errors
+                echo "Updated ${R2_PREFIX}updates/$id.json"
+              else
+                echo "::notice::${R2_PREFIX}updates/$id.json is for another release, not changed"
+              fi
+            fi
+            if [ -f "updates/$id.json" ] && [ "$(jq -r .tag "updates/$id.json")" = "$TAG" ]; then
+              set_changelog "updates/$id.json"
+            fi
+          done
+          if ! git diff --quiet updates; then
+            git config user.name "RAMiK4"
+            git config user.email "60112744+RAMiK4@users.noreply.github.com"
+            git add updates
+            git commit -m "Changelog of $TAG"
+            git pull --rebase -q
+            git push
+          fi

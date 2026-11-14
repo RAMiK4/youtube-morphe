@@ -5,15 +5,16 @@ Builds the YouTube part of the Morphe patches changelog for a patches version.
 Stable version: the new features of its own section (it already lists everything since the previous stable).
 Dev version: the new features of all dev versions since the last released one (RELEASED).
 
-Bug fixes and improvements are not listed: the notes always end with a closing line instead.
+Bug fixes and improvements are not listed: the notes always end with a closing heading instead,
+and the release notes with the install note under it.
 Each group is a title followed by its changes, without version headings:
 
     ✨ New Features
     • ...
     🌟 Mod Features     (from MOD_FEATURES)
     • ...
-
     🔧 Bug fixes and other improvements
+    ⓘ After downloading, ...   (release notes only)
 
 The in-app dialog shows the titles bold with a thin rule under them. The release notes
 use "## <title>" headings (GitHub draws the same kind of rule) and add the files table.
@@ -47,7 +48,9 @@ GROUPS = (
 )
 FEATURE_GROUP = 0
 MOD_FEATURES_TITLE = "🌟 Mod Features"
-CLOSING_LINE = "🔧 Bug fixes and other improvements"
+CLOSING_TITLE = "🔧 Bug fixes and other improvements"
+# Release notes only: the APK downloaded from the release page is installed by hand.
+INSTALL_NOTE = "ⓘ After downloading, don't forget to install the new version from the Downloads folder"
 
 
 def clean(text):
@@ -186,9 +189,9 @@ def main():
         txt += [f"• {plain(item)}" for item in items]
         txt.append("")
 
-    # Fixes are not listed one by one; a blank line and the closing line end the notes.
-    md.append(CLOSING_LINE)
-    txt.append(CLOSING_LINE)
+    # Fixes are not listed one by one; a closing heading ends the notes.
+    md += [f"## {CLOSING_TITLE}", "", INSTALL_NOTE]
+    txt.append(CLOSING_TITLE)
 
     open(args.out_md, "w", encoding="utf-8").write("\n".join(md).strip() + "\n")
     open(args.out_txt, "w", encoding="utf-8").write("\n".join(txt).strip() + "\n")
